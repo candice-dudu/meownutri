@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>喵營 MeowNutri - 貓罐與乾糧營養計算 Web App</title>
+  <title>喵營 MeowNutri</title>
   
 <!-- iPhone 加入主畫面後的圖示設定 -->
     <link rel="apple-touch-icon" href="./mn.png">
@@ -919,6 +919,16 @@
         <div class="form-group" style="margin-bottom: 10px;">
           <label>產地 (Origin)</label>
           <input type="text" id="editFoodOrigin">
+        </div>
+        <div class="input-grid" style="margin-bottom: 10px;">
+          <div class="form-group">
+            <label>容量 (g)</label>
+            <input type="number" step="0.1" min="0" id="editFoodWeight" placeholder="如: 85">
+          </div>
+          <div class="form-group">
+            <label>熱量 (kcal/100g)</label>
+            <input type="number" step="0.1" min="0" id="editFoodKcal" placeholder="如: 95">
+          </div>
         </div>
         <div class="input-grid" style="margin-bottom: 10px;">
           <div class="form-group">
