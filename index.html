@@ -1089,6 +1089,49 @@
       }
     }
 
+    // 本機資料新增、編輯或刪除後，將目前本機狀態直接保存到雲端。
+    // 這裡不再與雲端合併，避免已刪除的資料被重新合併回來。
+    async function uploadLocalDataToCloud() {
+      if (!supabaseClient || !currentUser || syncInProgress) return;
+
+      syncInProgress = true;
+      try {
+        const localData = getLocalAppData();
+        const { error } = await supabaseClient
+          .from('user_app_data')
+          .upsert({
+            user_id: currentUser.id,
+            cats: localData.cats,
+            plans: localData.plans,
+            notes: localData.notes,
+            private_foods: localData.private_foods,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+
+        if (error) throw error;
+        updateSyncMessage('✓ 本機變更已同步至雲端');
+      } catch (error) {
+        console.error('保存本機變更失敗:', error);
+        updateSyncMessage('⚠️ 雲端更新失敗；本機資料仍保留');
+        showToast('雲端更新失敗：' + (error.message || error));
+      } finally {
+        syncInProgress = false;
+      }
+    }
+
+    let cloudUploadTimer = null;
+    function queueCloudUpload() {
+      if (!supabaseClient || !currentUser) return;
+      clearTimeout(cloudUploadTimer);
+      cloudUploadTimer = setTimeout(() => {
+        if (syncInProgress) {
+          queueCloudUpload();
+        } else {
+          uploadLocalDataToCloud();
+        }
+      }, 300);
+    }
+
     function updateSyncMessage(message) {
       const syncBanner = document.getElementById('syncBanner');
       if (!syncBanner) return;
@@ -1365,6 +1408,7 @@
 
       plans.unshift(newPlan);
       setLocalData(STORAGE_KEY_PLANS, plans);
+      queueCloudUpload();
 
       renderNotesView();
       showToast(`✅ 已將「${catName}」的菜單儲存至我的筆記！`);
@@ -1374,6 +1418,7 @@
       let plans = getLocalData(STORAGE_KEY_PLANS, []);
       plans = plans.filter(p => p.id !== planId);
       setLocalData(STORAGE_KEY_PLANS, plans);
+      queueCloudUpload();
       renderNotesView();
       showToast('已刪除該筆菜單規劃');
     };
@@ -1401,6 +1446,7 @@
       const privates = getLocalData(STORAGE_KEY_PRIVATE_FOODS, []);
       privates.unshift(newFood);
       setLocalData(STORAGE_KEY_PRIVATE_FOODS, privates);
+      queueCloudUpload();
 
       if (currentUser) {
         publicFoods.unshift(newFood);
@@ -1420,6 +1466,7 @@
       let privates = getLocalData(STORAGE_KEY_PRIVATE_FOODS, []);
       privates = privates.filter(f => f.id !== foodId);
       setLocalData(STORAGE_KEY_PRIVATE_FOODS, privates);
+      queueCloudUpload();
       renderDB();
       showToast('已從私人庫刪除該糧食');
     };
@@ -1481,6 +1528,7 @@
       });
 
       setLocalData(STORAGE_KEY_PRIVATE_FOODS, privates);
+      queueCloudUpload();
       closePrivateFoodModal();
       renderDB();
       showToast('✅ 已成功修改私人糧食資料！');
@@ -1623,6 +1671,7 @@
       let notes = getLocalData(STORAGE_KEY_NOTES, []);
       notes = notes.filter(n => n.id !== noteId);
       setLocalData(STORAGE_KEY_NOTES, notes);
+      queueCloudUpload();
       renderNotesView();
       showToast('已刪除評價筆記');
     };
@@ -1697,6 +1746,7 @@
       }
 
       setLocalData(STORAGE_KEY_CATS, cats);
+      queueCloudUpload();
       closeCatModal();
       renderNotesView();
       setupIntakePage();
@@ -1707,6 +1757,7 @@
       let cats = getLocalData(STORAGE_KEY_CATS, []);
       cats = cats.filter(c => c.id !== catId);
       setLocalData(STORAGE_KEY_CATS, cats);
+      queueCloudUpload();
       renderNotesView();
       setupIntakePage();
       showToast('已刪除貓咪檔案');
@@ -1744,6 +1795,7 @@
       const noteObj = { id: 'n_' + Date.now(), catName, foodName, rating, content, date: new Date().toISOString().split('T')[0] };
       notes.unshift(noteObj);
       setLocalData(STORAGE_KEY_NOTES, notes);
+      queueCloudUpload();
 
       closeNoteModal();
       renderNotesView();
