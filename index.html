@@ -997,6 +997,104 @@
       try { localStorage.setItem(key, JSON.stringify(value)); } catch(e) {}
     }
 
+    // 第一階段同步：把本機私人資料與目前使用者的雲端資料合併
+    // 同一個 id 以本機資料為優先；雲端中本機沒有的資料會保留下來。
+    let syncInProgress = false;
+
+    function mergeDataById(localItems, cloudItems) {
+      const merged = [];
+      const seen = new Set();
+
+      [...(Array.isArray(localItems) ? localItems : []),
+       ...(Array.isArray(cloudItems) ? cloudItems : [])]
+        .forEach(item => {
+          if (!item || typeof item !== 'object') return;
+          const id = String(item.id || '');
+          const key = id || JSON.stringify(item);
+          if (seen.has(key)) return;
+          seen.add(key);
+          merged.push(item);
+        });
+
+      return merged;
+    }
+
+    function getLocalAppData() {
+      return {
+        cats: getLocalData(STORAGE_KEY_CATS, []),
+        plans: getLocalData(STORAGE_KEY_PLANS, []),
+        notes: getLocalData(STORAGE_KEY_NOTES, []),
+        private_foods: getLocalData(STORAGE_KEY_PRIVATE_FOODS, [])
+      };
+    }
+
+    function saveLocalAppData(data) {
+      setLocalData(STORAGE_KEY_CATS, data.cats || []);
+      setLocalData(STORAGE_KEY_PLANS, data.plans || []);
+      setLocalData(STORAGE_KEY_NOTES, data.notes || []);
+      setLocalData(STORAGE_KEY_PRIVATE_FOODS, data.private_foods || []);
+    }
+
+    async function syncCurrentUserData() {
+      if (!supabaseClient || !currentUser || syncInProgress) return;
+
+      syncInProgress = true;
+      updateSyncMessage('⏳ 正在同步本機資料與雲端資料…');
+
+      try {
+        const localData = getLocalAppData();
+        const { data: cloudData, error: readError } = await supabaseClient
+          .from('user_app_data')
+          .select('cats, plans, notes, private_foods')
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+
+        if (readError) throw readError;
+
+        const mergedData = {
+          cats: mergeDataById(localData.cats, cloudData?.cats),
+          plans: mergeDataById(localData.plans, cloudData?.plans),
+          notes: mergeDataById(localData.notes, cloudData?.notes),
+          private_foods: mergeDataById(
+            localData.private_foods,
+            cloudData?.private_foods
+          )
+        };
+
+        const { error: writeError } = await supabaseClient
+          .from('user_app_data')
+          .upsert({
+            user_id: currentUser.id,
+            cats: mergedData.cats,
+            plans: mergedData.plans,
+            notes: mergedData.notes,
+            private_foods: mergedData.private_foods,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+
+        if (writeError) throw writeError;
+
+        saveLocalAppData(mergedData);
+        updateSyncMessage('✓ 已同步本機資料與雲端資料');
+
+        // 若目前畫面正在顯示相關資料，立即重新渲染
+        if (typeof renderNotesView === 'function') renderNotesView();
+        if (typeof renderDB === 'function') renderDB();
+      } catch (error) {
+        console.error('資料同步失敗:', error);
+        updateSyncMessage('⚠️ 登入成功，但資料同步失敗；本機資料仍保留');
+        showToast('資料同步失敗：' + (error.message || error));
+      } finally {
+        syncInProgress = false;
+      }
+    }
+
+    function updateSyncMessage(message) {
+      const syncBanner = document.getElementById('syncBanner');
+      if (!syncBanner) return;
+      syncBanner.innerText = message;
+    }
+
     // 初始化本機資料
     function initializeLocalStore() {
       if (!localStorage.getItem(STORAGE_KEY_CATS)) {
@@ -1708,17 +1806,21 @@ async function initializeAuth() {
   }
 
   const {
-    data: { session }
-  } = await supabaseClient.auth.getSession();
+      data: { session }
+    } = await supabaseClient.auth.getSession();
 
-  updateAuthState(session);
-
-  supabaseClient.auth.onAuthStateChange((event, nextSession) => {
-    updateAuthState(nextSession);
-
-    if (event === 'SIGNED_IN') {
-      showToast('✅ Google 登入成功');
+    updateAuthState(session);
+    if (session?.user) {
+      await syncCurrentUserData();
     }
+
+    supabaseClient.auth.onAuthStateChange((event, nextSession) => {
+      updateAuthState(nextSession);
+
+      if (event === 'SIGNED_IN') {
+        showToast('✅ Google 登入成功');
+        syncCurrentUserData();
+      }
 
     if (event === 'SIGNED_OUT') {
       showToast('已登出，繼續使用本機模式');
