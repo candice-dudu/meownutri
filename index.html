@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>喵營 MeowNutri - 貓罐與乾糧營養計算 Web App</title>
+  <!-- 引入 Supabase 官方 JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body {
+      background-color: #FBF9F5;
+      color: #1c1917;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background-color: #ffffff;
+      border-bottom: 1px solid #e7e5e4;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+    .header-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      width: 38px;
+      height: 38px;
+      background-color: #f97316;
+      color: white;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    .logo-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1c1917;
+    }
+    .tag-badge {
+      font-size: 10px;
+      background-color: #ffedd5;
+      color: #c2410c;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+      margin-left: 6px;
+    }
+    .nav-tabs {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      gap: 16px;
+      padding: 0 16px;
+      border-top: 1px solid #f5f5f4;
+      overflow-x: auto;
+    }
+    .tab-btn {
+      padding: 12px 4px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      background: none;
+      color: #78716c;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .tab-btn.active {
+      color: #ea580c;
+      border-bottom-color: #f97316;
+    }
+    
+    /* 頂部同步狀態橫幅 */
+    #syncBanner {
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 8px 16px;
+      font-size: 12px;
+      text-align: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.3s, color 0.3s;
+    }
+    
+    main {
+      flex: 1;
+      max-width: 1280px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px 16px;
+    }
+    .banner {
+      background: linear-gradient(to right, #fffbe3, #fff7ed);
+      border: 1px solid #fde68a;
+      padding: 14px 16px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: #78350f;
+      line-height: 1.5;
+    }
+    .grid-container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    @media (min-width: 850px) {
+      .grid-container {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    .card {
+      background-color: #ffffff;
+      border: 1px solid #e7e5e4;
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1c1917;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .type-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .type-btn {
+      padding: 8px 2px;
+      font-size: 12px;
+      border-radius: 10px;
+      border: 1px solid #e7e5e4;
+      background: white;
+      color: #57534e;
+      cursor: pointer;
+      text-align: center;
+      font-weight: 600;
+    }
+    .type-btn.active {
+      border-color: #f97316;
+      background-color: #fff7ed;
+      color: #c2410c;
+    }
+    .input-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .form-group label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #57534e;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #d6d3d1;
+      font-size: 13px;
+      outline: none;
+      width: 100%;
+      background: white;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: #f97316;
+    }
+    .btn-action {
+      width: 100%;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: opacity 0.2s;
+    }
+    .btn-action:hover { opacity: 0.9; }
+    .btn-primary {
+      background-color: #f97316;
+      color: white;
+    }
+    .btn-share {
+      background-color: #059669;
+      color: white;
+    }
+    .btn-secondary {
+      background-color: #f5f5f4;
+      color: #292524;
+      border: 1px solid #e7e5e4;
+    }
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      text-align: center;
+      margin: 14px 0;
+    }
+    .metric-box {
+      padding: 12px 6px;
+      border-radius: 12px;
+    }
+    .bg-orange { background-color: #fff7ed; color: #c2410c; }
+    .bg-amber { background-color: #fffbeb; color: #b45309; }
+    .bg-emerald { background-color: #ecfdf5; color: #047857; }
+    
+    .metric-num {
+      font-size: 22px;
+      font-weight: 800;
+      display: block;
+    }
+    .progress-bar-bg {
+      height: 14px;
+      width: 100%;
+      background-color: #e7e5e4;
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      margin: 10px 0;
+    }
+    .progress-segment {
+      height: 100%;
+      transition: width 0.3s;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .search-bar {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #d6d3d1;
+      font-size: 13px;
+      margin-bottom: 16px;
+      outline: none;
+    }
+    
+    /* 5欄式糧食卡片網格 */
+    .food-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    @media (min-width: 1024px) {
+      .food-card-grid {
+        grid-template-columns: repeat(5, 1fr);
+      }
+    }
+    .food-card {
+      background: white;
+      border: 1px solid #e7e5e4;
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .food-img-container {
+      width: 100%;
+      height: 120px;
+      background-color: #f5f5f4;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .food-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .hidden { display: none !important; }
+    
+    #toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #1c1917;
+      color: white;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    .cat-profile-card {
+      background: #fafaf9;
+      border: 1px solid #e7e5e4;
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .cat-avatar {
+      width: 48px;
+      height: 48px;
+      background: #f97316;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+    
+    .plan-mode-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #e7e5e4;
+      background: white;
+      font-size: 13px;
+      font-weight: 700;
+      color: #57534e;
+      cursor: pointer;
+      text-align: center;
+    }
+    .plan-mode-btn.active {
+      background: #fff7ed;
+      border-color: #f97316;
+      color: #c2410c;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #f5f5f4;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1c1917;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="syncBanner">
+    <span>💡 本機離線模式（免登入即可使用全部功能）。登入後可啟用跨裝置雲端同步！</span>
+  </div>
+
+  <header>
+    <div class="header-container">
+      <div class="logo-area">
+        <div class="logo-icon">🐱</div>
+        <div>
+          <span class="logo-title">喵營<span class="tag-badge">MeowNutri</span></span>
+        </div>
+      </div>
+      <div>
+        <button id="navLoginBtn" onclick="openAuthModal()" style="padding: 7px 14px; font-size: 12px; font-weight: 600; border-radius: 8px; border: 1px solid #d6d3d1; background: white; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+          <span>👤</span> <span id="authStatusText">登入 / 雲端同步</span>
+        </button>
+      </div>
+    </div>
+    <div class="nav-tabs">
+      <button class="tab-btn active" id="tab-calc" onclick="switchView('calc')">🧮 DMB 營養換算</button>
+      <button class="tab-btn" id="tab-intake" onclick="switchView('intake')">🍽️ 食量計算器</button>
+      <button class="tab-btn" id="tab-db" onclick="switchView('db')">📚 糧食庫</button>
+      <button class="tab-btn" id="tab-fav" onclick="switchView('fav')">⭐ 我的筆記</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- View 1: DMB 換算與快速預覽 -->
+    <div id="view-calc">
+      <div class="banner">
+        💡 <strong>為什麼要算 DMB 乾物質？</strong> 貓罐水分高達 80%，直接比較包裝上的蛋白質並不客觀，扣除水分換算成 <strong>DMB 比例</strong>，才能看出真正的蛋白質與碳水化合物含量！<br> 📍 此計算器結果僅供參考，非專業獸醫資訊。
+      </div>
+
+      <div class="grid-container">
+        <!-- 輸入區 -->
+        <div>
+          <div class="card">
+            <div class="card-title">1. 選擇糧食種類與基本資料</div>
+            <div class="type-grid">
+              <button class="type-btn active" id="t-wet" onclick="setFoodType('wet')">🥣 主食罐</button>
+              <button class="type-btn" id="t-snack" onclick="setFoodType('snack')">🐟 副食罐</button>
+              <button class="type-btn" id="t-dry" onclick="setFoodType('dry')">🌾 乾糧</button>
+              <button class="type-btn" id="t-raw" onclick="setFoodType('raw')">🥩 凍乾生肉</button>
+            </div>
+
+            <div class="input-grid">
+              <div class="form-group">
+                <label>品牌 (Brand)</label>
+                <input type="text" id="brand" placeholder="如: Thrive, Orijen">
+              </div>
+              <div class="form-group">
+                <label>產品名稱 (Name)</label>
+                <input type="text" id="name" placeholder="如: 雞肉罐 / 八種守護糧">
+              </div>
+              <div class="form-group">
+                <label>容量 (克 g)</label>
+                <input type="number" id="weight" value="85">
+              </div>
+              <div class="form-group">
+                <label>售價 (HKD $)</label>
+                <input type="number" id="price" placeholder="18">
+              </div>
+              <div class="form-group">
+                <label>產地 (Origin)</label>
+                <input type="text" id="origin" placeholder="如: 泰國, 紐西蘭">
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 10px;">
+              <label>📷 包裝照片 (Photo)</label>
+              <div style="display: flex; gap: 8px; margin-bottom: 6px; flex-wrap: wrap;">
+                <input type="file" id="imageFileInput" accept="image/*" onchange="handleFileUpload(event)" style="display: none;">
+                <button type="button" onclick="document.getElementById('imageFileInput').click()" style="padding: 6px 12px; font-size: 12px; border-radius: 8px; border: 1px solid #d6d3d1; background: #f5f5f4; cursor: pointer; font-weight: 600;">
+                  📁 選擇手機 / 電腦相片
+                </button>
+                <span style="font-size: 11px; color: #a8a29e; align-self: center;">或填寫網址</span>
+              </div>
+              <input type="text" id="imageUrl" placeholder="貼上照片連結，例如 https://.../can.jpg" oninput="updateImagePreview()">
+              <div id="imgPreviewBox" style="margin-top: 8px; display: none; align-items: center; gap: 10px; background: #fafaf9; padding: 6px 10px; border-radius: 8px; border: 1px dashed #d6d3d1;">
+                <img id="imgPreview" src="" alt="預覽照片" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px;">
+                <span style="font-size: 11px; color: #047857; font-weight: 600;">✓ 已讀取相片</span>
+                <button type="button" onclick="clearImage()" style="margin-left: auto; border: none; background: none; color: #ef4444; font-size: 11px; font-weight: 600; cursor: pointer;">移除</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">2. 包裝保證分析 (%)</div>
+            <div class="input-grid">
+              <div class="form-group">
+                <label>粗蛋白質 (Min %)</label>
+                <input type="number" step="0.1" id="p" value="11.5">
+              </div>
+              <div class="form-group">
+                <label>粗脂肪 (Min %)</label>
+                <input type="number" step="0.1" id="f" value="5.5">
+              </div>
+              <div class="form-group">
+                <label>粗纖維 (Max %)</label>
+                <input type="number" step="0.1" id="fib" value="0.4">
+              </div>
+              <div class="form-group">
+                <label>粗灰分 (Max %)</label>
+                <input type="number" step="0.1" id="ash" value="2.0">
+                <span style="font-size: 10px; color: #dc2626; margin-top: 2px; line-height: 1.3;">💡 如沒有列出灰粉含量時，可以8% （乾糧）或2.5% （罐頭）代替</span>
+              </div>
+              <div class="form-group">
+                <label>水分 (Max %)</label>
+                <input type="number" step="0.1" id="m" value="80.0">
+              </div>
+              <div class="form-group">
+                <label>官方熱量 (kcal/100g)</label>
+                <input type="number" id="officialKcal" placeholder="選填 (如 95)">
+              </div>
+            </div>
+
+            <button class="btn-action btn-primary" onclick="calc()">⚡ 立即換算 DMB 乾物質</button>
+            <button class="btn-action btn-share" onclick="saveAndShareFood()">🌐 換算並儲存至本機私人庫</button>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn-action btn-secondary" onclick="loadSample('wet')">載入主食罐範例</button>
+              <button class="btn-action btn-secondary" onclick="loadSample('dry')">載入乾糧範例</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 結果與食量預覽小工具 -->
+        <div>
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span style="font-weight: 700; font-size: 15px;">DMB 乾物質分析結果</span>
+              <span class="badge" id="carbTag" style="background: #ecfdf5; color: #047857;">低碳水 ✓</span>
+            </div>
+            <div class="metric-grid">
+              <div class="metric-box bg-orange"><span style="font-size: 11px;">蛋白質 DMB</span><span class="metric-num" id="resP">57.5</span>%</div>
+              <div class="metric-box bg-amber"><span style="font-size: 11px;">脂肪 DMB</span><span class="metric-num" id="resF">27.5</span>%</div>
+              <div class="metric-box bg-emerald"><span style="font-size: 11px;">碳水 DMB</span><span class="metric-num" id="resC">3.0</span>%</div>
+            </div>
+            <div style="font-size: 11px; color: #78716c; margin-top: 10px;">乾物質結構分佈：</div>
+            <div class="progress-bar-bg">
+              <div id="barP" class="progress-segment" style="width: 57.5%; background-color: #f97316;" title="蛋白質"></div>
+              <div id="barF" class="progress-segment" style="width: 27.5%; background-color: #f59e0b;" title="脂肪"></div>
+              <div id="barC" class="progress-segment" style="width: 3.0%; background-color: #10b981;" title="碳水"></div>
+              <div id="barO" class="progress-segment" style="width: 12.0%; background-color: #d6d3d1;" title="灰分與纖維"></div>
+            </div>
+            <div style="border-top: 1px solid #f5f5f4; margin-top: 14px; padding-top: 10px; font-size: 12px; color: #44403c;">
+              <div style="margin-bottom: 4px;">🔥 公式推算熱量：<strong id="resKcal">93</strong> kcal/100g</div>
+              <div style="margin-bottom: 4px;">🏷️ 官方標示熱量：<strong id="resOfficialKcal">未提供</strong></div>
+              <div id="kcalDiffBox" style="margin-bottom: 6px; display: none;" class="badge"></div>
+              <div style="margin-bottom: 4px;">💰 每 100g 均價：<strong id="resUnitPrice">未輸入</strong></div>
+              <div id="advice" style="margin-top: 10px; padding: 8px; background: #fafaf9; border-radius: 8px; font-size: 11px; color: #57534e;">
+                提示：極低碳水糧食，非常適合貓咪優質蛋白質攝取！
+              </div>
+            </div>
+          </div>
+
+          <!-- 保留的快速預覽小工具 -->
+          <div class="card">
+            <div class="card-title"><span>🐱 每日食量推算小工具 (快速預覽)</span><span class="badge" style="background: #e0f2fe; color: #0369a1; margin-left: auto;">免登入</span></div>
+            <p style="font-size: 11px; color: #78716c; margin-bottom: 12px;">輸入主子體重，根據剛剛算出的熱量為您推算每天餵食份量。</p>
+            <div class="input-grid" style="margin-bottom: 12px;">
+              <div class="form-group">
+                <label>貓咪體重 (kg)</label>
+                <input type="number" step="0.1" id="catWeight" value="4.5" oninput="calcIntake()">
+              </div>
+              <div class="form-group">
+                <label>生命狀態 (Factor)</label>
+                <select id="catStatus" onchange="calcIntake()">
+                  <option value="1.2">已絕育成貓 (F=1.2)</option>
+                  <option value="1.4">未絕育成貓 (F=1.4)</option>
+                  <option value="0.8">需要減重 (F=0.8)</option>
+                  <option value="1.0">高齡 / 低活動 (F=1.0)</option>
+                  <option value="2.5">幼貓 成長期 (F=2.5)</option>
+                </select>
+              </div>
+            </div>
+            <div style="background: #fafaf9; border: 1px solid #e7e5e4; border-radius: 12px; padding: 12px;">
+              <div style="text-align: center; margin-bottom: 12px; border-bottom: 1px dashed #d6d3d1; padding-bottom: 10px;">
+                <span style="font-size: 11px; color: #57534e;">每日所需總熱量 (DER)</span><br>
+                <span style="font-size: 24px; font-weight: 800; color: #ea580c;" id="dailyKcalReq">259</span> <span style="font-size: 12px; color: #78716c;">kcal / 天</span>
+              </div>
+              <div id="feedingPortions" style="font-size: 12px; color: #44403c; line-height: 1.6;">
+                <div style="font-weight: 700; margin-bottom: 4px; color: #1c1917;">🍽️ 若全部餵食這款糧食：</div>
+                <div>▸ 每日需餵食約：<strong style="color: #059669; font-size: 14px;" id="feedGrams">278</strong> 克</div>
+                <div id="feedCansRow">▸ 換算成包裝：<strong style="color: #059669; font-size: 14px;" id="feedCans">3.3</strong> 罐 / 包</div>
+                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e7e5e4;">
+                  <div style="font-weight: 700; margin-bottom: 4px; color: #1c1917;">🥣 半濕半乾混合餵食參考：</div>
+                  <div style="font-size: 11px; color: #57534e;">若每天固定餵 1 罐主食罐 (假設 80kcal)</div>
+                  <div>▸ 剩餘需補充乾糧約：<strong id="mixedDryGrams">46</strong> 克 <span style="font-size: 10px; color: #a8a29e;">(以 3.85kcal/g 估算)</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- View 2: 全新「🍽️ 食量計算器」專頁 -->
+    <div id="view-intake" class="hidden">
+      <div class="banner">
+        🍽️ <strong>餵食量規劃專頁</strong>：可直接帶入「我的筆記」中的貓咪資料，並與「糧食庫」動態串聯，支援全乾糧、全濕糧或乾濕混合的最佳黃金比例試算！
+      </div>
+
+      <div class="grid-container">
+        <!-- 左側：第一部分 (貓咪基本資料與熱量目標) -->
+        <div>
+          <div class="card">
+            <div class="card-title">第一步：貓咪基本資料與每日熱量目標 (DER)</div>
+            
+            <div style="background: #fff7ed; padding: 10px; border-radius: 10px; border: 1px solid #ffedd5; margin-bottom: 14px; font-size: 12px;">
+              <span style="font-weight: 700; color: #c2410c;">⚡ 快捷載入：</span>
+              <select id="planCatSelect" onchange="loadCatToPlanner()" style="margin-top: 4px; width: 100%; padding: 6px; border-radius: 6px; border: 1px solid #fdba74;">
+                <option value="">-- 手動填寫 / 選擇「我的筆記」已存主子 --</option>
+              </select>
+            </div>
+
+            <div class="input-grid">
+              <div class="form-group">
+                <label>貓咪名字 (選填)</label>
+                <input type="text" id="planCatName" placeholder="例: 大橘子">
+              </div>
+              <div class="form-group">
+                <label>目前體重 (kg)</label>
+                <input type="number" step="0.1" id="planCatWeight" value="4.5" oninput="recalcPlanCalories()">
+              </div>
+              <div class="form-group">
+                <label>年齡與階段</label>
+                <select id="planCatAgeStage" onchange="recalcPlanCalories()">
+                  <option value="adult">成貓 (1 ~ 7 歲)</option>
+                  <option value="kitten">幼貓 (&lt; 1 歲)</option>
+                  <option value="senior">高齡貓 (&gt; 7 歲)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>生命與體態狀態 (Factor)</label>
+                <select id="planCatFactor" onchange="recalcPlanCalories()">
+                  <option value="1.2">已絕育成貓 (F=1.2)</option>
+                  <option value="1.4">未絕育成貓 (F=1.4)</option>
+                  <option value="0.8">需要減重 (F=0.8)</option>
+                  <option value="1.0">高齡 / 低活動量 (F=1.0)</option>
+                  <option value="2.0">幼貓 成長期 (F=2.0)</option>
+                  <option value="2.5">幼貓 快速生長期 (F=2.5)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-top: 16px; background: #fafaf9; padding: 14px; border-radius: 12px; border: 1px solid #e7e5e4; text-align: center;">
+              <div style="font-size: 11px; color: #78716c;">基礎代謝率 (RER): <span id="planRER">216</span> kcal</div>
+              <div style="font-size: 13px; font-weight: 700; color: #57534e; margin-top: 2px;">每日建議總攝取熱量 (DER)</div>
+              <div style="font-size: 32px; font-weight: 900; color: #ea580c; margin: 4px 0;" id="planDER">259</div>
+              <div style="font-size: 11px; color: #a8a29e;">kcal / 天</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右側：第二部分 (餵食模式與糧食庫連動) -->
+        <div>
+          <div class="card">
+            <div class="card-title">第二步：設定餵食模式與選取糧食</div>
+            
+            <div style="display: flex; gap: 6px; margin-bottom: 16px;">
+              <button class="plan-mode-btn active" id="pMode-dry" onclick="setPlanMode('dry')">🥣 全乾糧</button>
+              <button class="plan-mode-btn" id="pMode-wet" onclick="setPlanMode('wet')">🥫 全濕糧</button>
+              <button class="plan-mode-btn" id="pMode-mixed" onclick="setPlanMode('mixed')">🥗 乾濕混合</button>
+            </div>
+
+            <div id="planSecDry" class="plan-section">
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label>選擇乾糧 (連動糧食庫)</label>
+                <select id="selectDryFood" onchange="recalcPlanFoodIntake()"></select>
+              </div>
+              <div style="font-size: 12px; color: #57534e; margin-bottom: 12px; background: #f5f5f4; padding: 8px 12px; border-radius: 8px;">
+                該乾糧熱量密度：<strong id="dryKcalPer100g">385</strong> kcal / 100g (<span id="dryKcalPerG">3.85</span> kcal/g)
+              </div>
+            </div>
+
+            <div id="planSecWet" class="plan-section hidden">
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label>選擇濕糧/主食罐 (連動糧食庫)</label>
+                <select id="selectWetFood" onchange="recalcPlanFoodIntake()"></select>
+              </div>
+              <div style="font-size: 12px; color: #57534e; margin-bottom: 12px; background: #f5f5f4; padding: 8px 12px; border-radius: 8px;">
+                熱量密度：<strong id="wetKcalPer100g">93</strong> kcal / 100g | 單罐容量：<strong id="wetCanWeight">85</strong>g (約 <span id="wetKcalPerCan">79</span> kcal/罐)
+              </div>
+            </div>
+
+            <div id="planSecMixed" class="plan-section hidden">
+              <div class="form-group" style="margin-bottom: 10px;">
+                <label>每日預計餵食的主食罐數量</label>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <input type="number" step="0.5" id="mixedCanCount" value="1.0" oninput="recalcPlanFoodIntake()" style="width: 100px;">
+                  <span style="font-size: 13px; font-weight: 600;">罐 / 天</span>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom: 10px;">
+                <label>【濕糧款】從糧食庫選擇</label>
+                <select id="selectMixedWetFood" onchange="recalcPlanFoodIntake()"></select>
+              </div>
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label>【乾糧款】從糧食庫選擇</label>
+                <select id="selectMixedDryFood" onchange="recalcPlanFoodIntake()"></select>
+              </div>
+            </div>
+
+            <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 16px; margin-top: 14px;">
+              <div style="font-size: 13px; font-weight: 700; color: #047857; margin-bottom: 8px;">📋 每日黃金餵食建議份量：</div>
+              <div id="planOutputSummary" style="font-size: 16px; font-weight: 800; color: #065f46; line-height: 1.5;">
+                每日乾糧：約 67 克
+              </div>
+            </div>
+
+            <button class="btn-action btn-primary" onclick="savePlanToProfile()" style="margin-top: 14px;">
+              📋 儲存此餵食量至主子檔案
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- View 3: 糧食庫 -->
+    <div id="view-db" class="hidden">
+      <div class="banner">
+        🌐 <strong>貓奴共享資料庫與私人庫</strong>：在離線模式下儲存至私人庫（隨時可修改/刪除），登入連線後可同步共享！<br> 📍 預設內容均參考至網絡資料, 可能會與實際包裝有差異。
+      </div>
+      
+      <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+        <button id="dbTabPublic" onclick="switchDbTab('public')" style="padding: 8px 16px; font-size: 13px; font-weight: 700; border-radius: 20px; background: #1c1917; color: white; border: none; cursor: pointer;">🌐 雲端公開糧食庫</button>
+        <button id="dbTabPrivate" onclick="switchDbTab('private')" style="padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 20px; background: #e7e5e4; color: #57534e; border: none; cursor: pointer;">📱 本機私人庫 <span id="privateCountBadge" style="background: #ef4444; color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-left: 4px; display: none;">0</span></button>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <input type="text" class="search-bar" id="dbSearch" oninput="filterDB()" placeholder="🔍 搜尋品牌或產品名稱..." style="margin-bottom: 0; flex: 1;">
+        <select id="dbCategoryFilter" onchange="filterDB()" style="padding: 10px; border-radius: 10px; border: 1px solid #d6d3d1; font-size: 13px; outline: none; background: white;">
+          <option value="all">所有類別</option>
+          <option value="wet">🥣 主食罐</option>
+          <option value="snack">🐟 副食罐</option>
+          <option value="dry">🌾 乾糧</option>
+          <option value="raw">🥩 凍乾生肉</option>
+        </select>
+      </div>
+      
+      <div class="food-card-grid" id="foodListContainer">
+        <!-- JS 渲染 -->
+      </div>
+    </div>
+
+    <!-- View 4: 我的筆記 -->
+    <div id="view-fav" class="hidden">
+      <!-- 區塊 1：主子檔案 -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 18px; font-weight: 700; color: #1c1917;">🐱 我的主子檔案</h3>
+        <button onclick="openCatModal()" style="padding: 6px 14px; font-size: 12px; font-weight: 700; border-radius: 8px; background: #f97316; color: white; border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(249,115,22,0.2);">+ 新增貓咪</button>
+      </div>
+
+      <div class="grid-container" id="catProfilesContainer" style="margin-bottom: 28px;">
+        <!-- JS 動態渲染卡片 -->
+      </div>
+
+      <!-- 區塊 2：專屬餵食菜單規劃 (獨立分格) -->
+      <div class="card" style="margin-bottom: 28px;">
+        <div class="section-header">
+          <div class="section-title">
+            <span>📋 主子專屬餵食規劃</span>
+            <span style="font-size: 11px; font-weight: normal; color: #78716c;">(由「食量計算器」匯入)</span>
+          </div>
+        </div>
+        <div id="feedingPlansContainer" style="display: grid; gap: 10px;">
+          <!-- JS 動態渲染菜單卡片 -->
+        </div>
+      </div>
+
+      <!-- 區塊 3：試吃與腸胃觀察評價 (獨立分格) -->
+      <div class="card">
+        <div class="section-header">
+          <div class="section-title">
+            <span>📝 歷史試吃與腸胃觀察筆記</span>
+          </div>
+          <button onclick="openNoteModal()" style="padding: 4px 10px; font-size: 11px; font-weight: 600; border-radius: 6px; background: #f5f5f4; color: #292524; border: 1px solid #d6d3d1; cursor: pointer;">+ 新增評價筆記</button>
+        </div>
+        <div id="feedingNotesContainer" style="display: grid; gap: 10px;">
+          <!-- JS 動態渲染評價筆記 -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal 1: Auth 登入 Modal (電郵 + Google) -->
+  <div id="authModal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px;">
+    <div style="background: white; max-width: 380px; width: 100%; border-radius: 16px; padding: 22px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); position: relative;">
+      <button onclick="closeAuthModal()" style="position: absolute; right: 14px; top: 14px; border: none; background: none; font-size: 18px; cursor: pointer; color: #78716c;">✕</button>
+      <h3 style="font-size: 18px; font-weight: 700; color: #1c1917; margin-bottom: 6px; text-align: center;">☁️ 雲端帳號備份</h3>
+      <p style="font-size: 12px; color: #78716c; margin-bottom: 16px; text-align: center;">登入後可同步主子資料至雲端，並分享糧食至公開庫。</p>
+
+      <form onsubmit="handleEmailAuth(event)">
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label>電郵地址 (Email)</label>
+          <input type="email" id="authEmail" required placeholder="meow@example.com">
+        </div>
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label>密碼 (Password)</label>
+          <input type="password" id="authPassword" required placeholder="包含至少6位字元">
+        </div>
+        <button type="submit" class="btn-action btn-primary">⚡ 電郵登入 / 註冊</button>
+      </form>
+
+      <div style="position: relative; text-align: center; margin: 16px 0;">
+        <span style="background: white; padding: 0 8px; font-size: 11px; color: #a8a29e; position: relative; z-index: 1;">或使用快捷登入</span>
+        <div style="position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: #e7e5e4;"></div>
+      </div>
+
+      <button onclick="loginWithGoogle()" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #d6d3d1; background: white; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+        Google 一鍵登入
+      </button>
+
+      <div style="margin-top: 14px; text-align: center;">
+        <button onclick="closeAuthModal()" style="background: none; border: none; font-size: 11px; color: #a8a29e; cursor: pointer;">暫不登入，繼續以離線模式使用</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: 貓咪檔案編輯/新增 -->
+  <div id="catModal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px;">
+    <div style="background: white; max-width: 400px; width: 100%; border-radius: 16px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); position: relative;">
+      <button onclick="closeCatModal()" style="position: absolute; right: 14px; top: 14px; border: none; background: none; font-size: 18px; cursor: pointer; color: #78716c;">✕</button>
+      <h3 id="catModalTitle" style="font-size: 16px; font-weight: 700; color: #1c1917; margin-bottom: 14px;">🐱 新增主子檔案</h3>
+      <form onsubmit="saveCatProfile(event)">
+        <input type="hidden" id="catModalId">
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label>貓咪名字 *</label>
+          <input type="text" id="catModalName" required placeholder="例如: 大橘子 / 小咪">
+        </div>
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label>目前體重 (kg) *</label>
+          <input type="number" step="0.1" id="catModalWeight" required placeholder="例如: 4.5">
+        </div>
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label>出生日期 (選填)</label>
+          <input type="date" id="catModalBirthDate">
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label>生命與體態狀態 (計算熱量用)</label>
+          <select id="catModalFactor">
+            <option value="1.2|已絕育成成貓">已絕育成貓 (F=1.2)</option>
+            <option value="1.4|未絕育成貓">未絕育成貓 (F=1.4)</option>
+            <option value="0.8|需要減重">需要減重 (F=0.8)</option>
+            <option value="1.0|高齡 / 低活動">高齡 / 低活動量 (F=1.0)</option>
+            <option value="2.0|幼貓 成長期">幼貓 成長期 (F=2.0)</option>
+            <option value="2.5|幼貓 快速生長期">幼貓 快速生長期 (F=2.5)</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-action btn-primary">💾 儲存主子資料</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 3: 新增/編輯評價筆記 -->
+  <div id="noteModal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px;">
+    <div style="background: white; max-width: 400px; width: 100%; border-radius: 16px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); position: relative;">
+      <button onclick="closeNoteModal()" style="position: absolute; right: 14px; top: 14px; border: none; background: none; font-size: 18px; cursor: pointer; color: #78716c;">✕</button>
+      <h3 id="noteModalTitle" style="font-size: 16px; font-weight: 700; color: #1c1917; margin-bottom: 14px;">📝 新增試吃評價</h3>
+      <form onsubmit="saveFeedingNote(event)">
+        <input type="hidden" id="noteModalId">
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label>對象貓咪</label>
+          <select id="noteModalCatSelect" required></select>
+        </div>
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label>糧食/罐頭名稱 *</label>
+          <input type="text" id="noteModalFoodName" required placeholder="例: K9 - 牛肉鱈魚">
+        </div>
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label>愛吃程度 (1-5 星)</label>
+          <select id="noteModalRating">
+            <option value="5">⭐⭐⭐⭐⭐ (爆吃清盤)</option>
+            <option value="4">⭐⭐⭐⭐ (會吃完)</option>
+            <option value="3">⭐⭐⭐ (加料才吃)</option>
+            <option value="2">⭐⭐ (只舔湯汁)</option>
+            <option value="1">⭐ (完全不吃)</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label>觀察與筆記</label>
+          <textarea id="noteModalContent" rows="3" placeholder="例如: 便便成型良好、無過敏軟便現象..."></textarea>
+        </div>
+        <button type="submit" class="btn-action btn-primary">💾 儲存筆記</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 4: 編輯私人庫糧食 Modal -->
+  <div id="privateFoodModal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px;">
+    <div style="background: white; max-width: 440px; width: 100%; border-radius: 16px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); position: relative; max-height: 90vh; overflow-y: auto;">
+      <button onclick="closePrivateFoodModal()" style="position: absolute; right: 14px; top: 14px; border: none; background: none; font-size: 18px; cursor: pointer; color: #78716c;">✕</button>
+      <h3 style="font-size: 16px; font-weight: 700; color: #1c1917; margin-bottom: 14px;">✏️ 編輯私人庫糧食</h3>
+      <form onsubmit="saveEditedPrivateFood(event)">
+        <input type="hidden" id="editFoodId">
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label>糧食種類</label>
+          <select id="editFoodCategory">
+            <option value="wet">🥣 主食罐</option>
+            <option value="snack">🐟 副食罐</option>
+            <option value="dry">🌾 乾糧</option>
+            <option value="raw">🥩 凍乾生肉</option>
+          </select>
+        </div>
+        <div class="input-grid" style="margin-bottom: 10px;">
+          <div class="form-group">
+            <label>品牌 *</label>
+            <input type="text" id="editFoodBrand" required>
+          </div>
+          <div class="form-group">
+            <label>產品名稱 *</label>
+            <input type="text" id="editFoodName" required>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label>產地 (Origin)</label>
+          <input type="text" id="editFoodOrigin">
+        </div>
+        <div class="input-grid" style="margin-bottom: 10px;">
+          <div class="form-group">
+            <label>蛋白 DMB (%)</label>
+            <input type="number" step="0.1" id="editFoodPDMB">
+          </div>
+          <div class="form-group">
+            <label>脂肪 DMB (%)</label>
+            <input type="number" step="0.1" id="editFoodFDMB">
+          </div>
+          <div class="form-group">
+            <label>碳水 DMB (%)</label>
+            <input type="number" step="0.1" id="editFoodCarbDMB">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label>照片網址 (Image URL)</label>
+          <input type="text" id="editFoodImg">
+        </div>
+        <button type="submit" class="btn-action btn-primary">💾 儲存修訂</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast">提示訊息</div>
+
+  <script>
+    // Supabase 設定
+    const SUPABASE_URL = "https://your-supabase-url.supabase.co";
+    const SUPABASE_ANON_KEY = "your-anon-key";
+    let supabaseClient = null;
+    let currentUser = null;
+
+    if (SUPABASE_URL !== "https://your-supabase-url.supabase.co" && typeof supabase !== 'undefined') {
+      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+
+    // 全局變數
+    let currentType = 'wet';
+    let globalCalculatedKcal100g = 0;
+    let globalFoodWeight = 85;
+    let currentDbTab = 'public';
+    let currentPlanMode = 'dry';
+
+    const STORAGE_KEY_CATS = 'meow_local_cats';
+    const STORAGE_KEY_PLANS = 'meow_local_plans';
+    const STORAGE_KEY_NOTES = 'meow_local_notes';
+    const STORAGE_KEY_PRIVATE_FOODS = 'meow_local_private_foods';
+
+    // 預設公開糧食庫 (加上 isPreset 標記)
+    let publicFoods = [
+      { id: 'p1', brand: 'Thrive 脆樂芙', name: '純雞胸肉主食罐', category: 'wet', categoryName: '🥣 主食罐', weight: '75', origin: '英國製造', img: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=300&q=80', pDMB: '76.5', fDMB: '11.8', carbDMB: '1.2', p: 16.5, f: 2.0, fib: 0.1, ash: 1.5, m: 80.0, kcal100g: 96, isPreset: true },
+      { id: 'p2', brand: 'Orijen 渴望', name: '八種守護全貓糧', category: 'dry', categoryName: '🌾 乾糧', weight: '1800', origin: '加拿大製造', img: 'https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=300&q=80', pDMB: '44.4', fDMB: '20.0', carbDMB: '21.1', p: 40.0, f: 18.0, fib: 3.0, ash: 9.0, m: 10.0, kcal100g: 385, isPreset: true },
+      { id: 'p3', brand: '汪喵星球', name: '幼母貓營養主食罐', category: 'wet', categoryName: '🥣 主食罐', weight: '80', origin: '台灣製造', img: 'https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=300&q=80', pDMB: '62.0', fDMB: '26.0', carbDMB: '4.1', p: 13.5, f: 5.7, fib: 0.5, ash: 1.8, m: 78.0, kcal100g: 110, isPreset: true },
+      { id: 'p4', brand: 'ZiwiPeak 巔峰', name: '牛肉全貓風乾生肉糧', category: 'raw', categoryName: '🥩 凍乾生肉', weight: '400', origin: '紐西蘭製造', img: 'https://images.unsplash.com/photo-1535268647677-300dbf3d78d1?w=300&q=80', pDMB: '43.0', fDMB: '35.0', carbDMB: '2.0', p: 38.0, f: 31.0, fib: 2.0, ash: 12.0, m: 14.0, kcal100g: 480, isPreset: true },
+      { id: 'p5', brand: 'Wellness CORE', name: '無穀低敏雞肉主食罐', category: 'wet', categoryName: '🥣 主食罐', weight: '156', origin: '美國製造', img: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=300&q=80', pDMB: '54.5', fDMB: '31.8', carbDMB: '3.5', p: 12.0, f: 7.0, fib: 1.0, ash: 2.0, m: 78.0, kcal100g: 105, isPreset: true }
+    ];
+
+    function getLocalData(key, defaultValue) {
+      try {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : defaultValue;
+      } catch(e) { return defaultValue; }
+    }
+    function setLocalData(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch(e) {}
+    }
+
+    // 初始化本機資料
+    function initializeLocalStore() {
+      if (!localStorage.getItem(STORAGE_KEY_CATS)) {
+        setLocalData(STORAGE_KEY_CATS, [
+          { id: 'c1', name: '大橘子', weight: 6.2, birthDate: '2020-05-12', factor: 0.8, statusText: '需要減重' },
+          { id: 'c2', name: '小咪', weight: 4.1, birthDate: '2023-10-01', factor: 1.2, statusText: '已絕育成貓' }
+        ]);
+      }
+      if (!localStorage.getItem(STORAGE_KEY_PLANS)) {
+        setLocalData(STORAGE_KEY_PLANS, [
+          { id: 'p_1', catName: '大橘子', modeName: '乾濕混合', der: '259', summary: '每日建議份量：🥫 濕糧 1 罐 + 🌾 乾糧 47 克', date: '2026-09-01' }
+        ]);
+      }
+      if (!localStorage.getItem(STORAGE_KEY_NOTES)) {
+        setLocalData(STORAGE_KEY_NOTES, [
+          { id: 'n_1', catName: '大橘子', foodName: 'K9 Natural - 牛肉鱈魚', rating: 5, content: '大少爺非常賞臉，一開罐就清盤。便便成形漂亮無臭味。', date: '2026-09-01' }
+        ]);
+      }
+      if (!localStorage.getItem(STORAGE_KEY_PRIVATE_FOODS)) {
+        setLocalData(STORAGE_KEY_PRIVATE_FOODS, []);
+      }
+    }
+
+    // 切換頁籤 View
+    window.switchView = function(viewName) {
+      ['calc', 'intake', 'db', 'fav'].forEach(v => {
+        document.getElementById('view-' + v).classList.add('hidden');
+        document.getElementById('tab-' + v).classList.remove('active');
+      });
+      
+      document.getElementById('view-' + viewName).classList.remove('hidden');
+      document.getElementById('tab-' + viewName).classList.add('active');
+
+      if(viewName === 'intake') setupIntakePage();
+      if(viewName === 'db') renderDB();
+      if(viewName === 'fav') renderNotesView();
+    };
+
+    window.switchDbTab = function(tab) {
+      currentDbTab = tab;
+      const btnPub = document.getElementById('dbTabPublic');
+      const btnPriv = document.getElementById('dbTabPrivate');
+      
+      if(tab === 'public') {
+        btnPub.style.background = '#1c1917'; btnPub.style.color = 'white';
+        btnPriv.style.background = '#e7e5e4'; btnPriv.style.color = '#57534e';
+      } else {
+        btnPriv.style.background = '#1c1917'; btnPriv.style.color = 'white';
+        btnPub.style.background = '#e7e5e4'; btnPub.style.color = '#57534e';
+      }
+      renderDB();
+    };
+
+    // DMB 乾物質計算核心
+    window.setFoodType = function(type) {
+      currentType = type;
+      ['wet', 'snack', 'dry', 'raw'].forEach(t => document.getElementById('t-' + t).classList.remove('active'));
+      document.getElementById('t-' + type).classList.add('active');
+      calc();
+    };
+
+    window.calc = function() {
+      const p = parseFloat(document.getElementById('p').value) || 0;
+      const f = parseFloat(document.getElementById('f').value) || 0;
+      const fib = parseFloat(document.getElementById('fib').value) || 0;
+      const ash = parseFloat(document.getElementById('ash').value) || 0;
+      const m = parseFloat(document.getElementById('m').value) || 0;
+      const weight = parseFloat(document.getElementById('weight').value) || 0;
+      const price = parseFloat(document.getElementById('price').value) || 0;
+      const officialKcal = parseFloat(document.getElementById('officialKcal').value) || 0;
+
+      const dryMatter = 100 - m;
+      if (dryMatter <= 0) return null;
+
+      const carbWet = Math.max(0, 100 - (p + f + fib + ash + m));
+      const pDMB = ((p / dryMatter) * 100).toFixed(1);
+      const fDMB = ((f / dryMatter) * 100).toFixed(1);
+      const carbDMB = ((carbWet / dryMatter) * 100).toFixed(1);
+      const otherDMB = (((fib + ash) / dryMatter) * 100).toFixed(1);
+
+      const kcal100g = Math.round((p * 3.5) + (f * 8.5) + (carbWet * 3.5));
+      globalCalculatedKcal100g = kcal100g;
+      globalFoodWeight = weight > 0 ? weight : (currentType === 'dry' ? 1000 : 85);
+
+      document.getElementById('resP').innerText = pDMB;
+      document.getElementById('resF').innerText = fDMB;
+      document.getElementById('resC').innerText = carbDMB;
+      document.getElementById('resKcal').innerText = kcal100g;
+
+      const resOfficial = document.getElementById('resOfficialKcal');
+      const diffBox = document.getElementById('kcalDiffBox');
+      if (officialKcal > 0) {
+        resOfficial.innerText = officialKcal + ' kcal/100g';
+        const diffPct = Math.round((Math.abs(kcal100g - officialKcal) / officialKcal) * 100);
+        diffBox.style.display = 'inline-block';
+        if (diffPct <= 10) {
+          diffBox.style.background = '#ecfdf5'; diffBox.style.color = '#047857'; diffBox.innerText = '✓ 公式推算與官方標示相近';
+        } else {
+          diffBox.style.background = '#fffbeb'; diffBox.style.color = '#b45309'; diffBox.innerText = `⚠️ 差距 ${diffPct}% (${kcal100g > officialKcal ? '公式較高' : '公式較低'})`;
+        }
+      } else {
+        resOfficial.innerText = '未提供';
+        diffBox.style.display = 'none';
+      }
+
+      document.getElementById('barP').style.width = pDMB + '%';
+      document.getElementById('barF').style.width = fDMB + '%';
+      document.getElementById('barC').style.width = carbDMB + '%';
+      document.getElementById('barO').style.width = otherDMB + '%';
+
+      if (price > 0 && weight > 0) document.getElementById('resUnitPrice').innerText = '$' + (price / weight * 100).toFixed(1) + ' / 100g';
+      else document.getElementById('resUnitPrice').innerText = '未輸入';
+
+      calcIntake();
+      return { pDMB, fDMB, carbDMB, kcal100g };
+    };
+
+    // 快速預覽食量小工具
+    window.calcIntake = function() {
+      const weight = parseFloat(document.getElementById('catWeight').value) || 4.5;
+      const factor = parseFloat(document.getElementById('catStatus').value) || 1.2;
+      const der = Math.round((70 * Math.pow(weight, 0.75)) * factor);
+      document.getElementById('dailyKcalReq').innerText = der;
+
+      if(globalCalculatedKcal100g > 0) {
+        const reqGrams = (der / globalCalculatedKcal100g) * 100;
+        document.getElementById('feedGrams').innerText = Math.round(reqGrams);
+        if(currentType === 'dry') {
+          document.getElementById('feedCansRow').style.display = 'none';
+          document.getElementById('mixedDryGrams').innerText = Math.round(Math.max(0, der - 80) / globalCalculatedKcal100g * 100);
+        } else {
+          document.getElementById('feedCansRow').style.display = 'block';
+          document.getElementById('feedCans').innerText = (reqGrams / globalFoodWeight).toFixed(1);
+          document.getElementById('mixedDryGrams').innerText = Math.round(Math.max(0, der - (globalCalculatedKcal100g * globalFoodWeight/100)) / 3.85);
+        }
+      }
+    };
+
+    // 「食量計算器」專頁
+    function setupIntakePage() {
+      const cats = getLocalData(STORAGE_KEY_CATS, []);
+      const select = document.getElementById('planCatSelect');
+      select.innerHTML = `<option value="">-- 手動填寫 / 選擇「我的筆記」已存主子 --</option>` + 
+        cats.map(c => `<option value="${c.id}">${c.name} (${c.weight}kg - ${c.statusText || '標準'})</option>`).join('');
+
+      populateFoodDropdowns();
+      recalcPlanCalories();
+    }
+
+    window.loadCatToPlanner = function() {
+      const catId = document.getElementById('planCatSelect').value;
+      if (!catId) return;
+      const cats = getLocalData(STORAGE_KEY_CATS, []);
+      const cat = cats.find(c => c.id === catId);
+      if (cat) {
+        document.getElementById('planCatName').value = cat.name;
+        document.getElementById('planCatWeight').value = cat.weight;
+        if(cat.factor) document.getElementById('planCatFactor').value = cat.factor;
+        recalcPlanCalories();
+      }
+    };
+
+    function getAllAvailableFoods() {
+      const privates = getLocalData(STORAGE_KEY_PRIVATE_FOODS, []);
+      return [...publicFoods, ...privates];
+    }
+
+    function populateFoodDropdowns() {
+      const foods = getAllAvailableFoods();
+      const drys = foods.filter(f => f.category === 'dry');
+      const wets = foods.filter(f => f.category === 'wet' || f.category === 'snack' || f.category === 'raw');
+
+      const dryOptions = drys.map(f => `<option value="${f.id}">${f.brand} - ${f.name} (${f.kcal100g || 385} kcal/100g)</option>`).join('') || `<option value="default">標準通用乾糧 (385 kcal/100g)</option>`;
+      const wetOptions = wets.map(f => `<option value="${f.id}">${f.brand} - ${f.name} (${f.weight || 85}g | ${f.kcal100g || 95} kcal/100g)</option>`).join('') || `<option value="default">標準通用主食罐 (85g | 93 kcal/100g)</option>`;
+
+      document.getElementById('selectDryFood').innerHTML = dryOptions;
+      document.getElementById('selectWetFood').innerHTML = wetOptions;
+      document.getElementById('selectMixedWetFood').innerHTML = wetOptions;
+      document.getElementById('selectMixedDryFood').innerHTML = dryOptions;
+    }
+
+    window.setPlanMode = function(mode) {
+      currentPlanMode = mode;
+      ['dry', 'wet', 'mixed'].forEach(m => {
+        document.getElementById('pMode-' + m).classList.remove('active');
+        document.getElementById('planSec' + m.charAt(0).toUpperCase() + m.slice(1)).classList.add('hidden');
+      });
+      document.getElementById('pMode-' + mode).classList.add('active');
+      document.getElementById('planSec' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.remove('hidden');
+      recalcPlanFoodIntake();
+    };
+
+    window.recalcPlanCalories = function() {
+      const w = parseFloat(document.getElementById('planCatWeight').value) || 4.5;
+      const factor = parseFloat(document.getElementById('planCatFactor').value) || 1.2;
+      const rer = Math.round(70 * Math.pow(w, 0.75));
+      const der = Math.round(rer * factor);
+
+      document.getElementById('planRER').innerText = rer;
+      document.getElementById('planDER').innerText = der;
+
+      recalcPlanFoodIntake();
+    };
+
+       window.recalcPlanFoodIntake = function() {
+      const der = parseFloat(document.getElementById('planDER').innerText) || 250;
+      const foods = getAllAvailableFoods();
+
+      if (currentPlanMode === 'dry') {
+        const dryId = document.getElementById('selectDryFood').value;
+        const dryFood = foods.find(f => f.id === dryId) || { kcal100g: 385, brand: '標準', name: '通用乾糧' };
+        const kcal100g = dryFood.kcal100g || 385;
+        document.getElementById('dryKcalPer100g').innerText = kcal100g;
+        document.getElementById('dryKcalPerG').innerText = (kcal100g / 100).toFixed(2);
+
+        const grams = Math.round((der / kcal100g) * 100);
+        document.getElementById('planOutputSummary').innerHTML = `每日建議乾糧：<span style="color:#f97316;">${grams} 克</span> / 天<br><span style="font-size: 12px; color: #78716c;">(選用：${dryFood.brand} - ${dryFood.name})</span>`;
+      
+      } else if (currentPlanMode === 'wet') {
+        const wetId = document.getElementById('selectWetFood').value;
+        const wetFood = foods.find(f => f.id === wetId) || { kcal100g: 93, weight: 85, brand: '標準', name: '通用主食罐' };
+        const kcal100g = wetFood.kcal100g || 93;
+        const canW = parseFloat(wetFood.weight) || 85;
+        const kcalPerCan = Math.round(kcal100g * (canW / 100));
+
+        document.getElementById('wetKcalPer100g').innerText = kcal100g;
+        document.getElementById('wetCanWeight').innerText = canW;
+        document.getElementById('wetKcalPerCan').innerText = kcalPerCan;
+
+        const totalGrams = Math.round((der / kcal100g) * 100);
+        const cans = (der / kcalPerCan).toFixed(1);
+        document.getElementById('planOutputSummary').innerHTML = `每日建議主食罐：<span style="color:#f97316;">${totalGrams} 克</span> (約 <span style="color:#f97316;">${cans} 罐</span> / 天)<br><span style="font-size: 12px; color: #78716c;">(選用：${wetFood.brand} - ${wetFood.name})</span>`;
+      
+      } else if (currentPlanMode === 'mixed') {
+        const canCount = parseFloat(document.getElementById('mixedCanCount').value) || 1.0;
+        const wetId = document.getElementById('selectMixedWetFood').value;
+        const dryId = document.getElementById('selectMixedDryFood').value;
+
+        const wetFood = foods.find(f => f.id === wetId) || { kcal100g: 93, weight: 85, brand: '標準', name: '通用主食罐' };
+        const dryFood = foods.find(f => f.id === dryId) || { kcal100g: 385, brand: '標準', name: '通用乾糧' };
+
+        const wetKcalPerCan = Math.round((wetFood.kcal100g || 93) * ((parseFloat(wetFood.weight) || 85) / 100));
+        const wetProvidedKcal = canCount * wetKcalPerCan;
+        const remainingKcal = Math.max(0, der - wetProvidedKcal);
+        const dryGrams = Math.round((remainingKcal / (dryFood.kcal100g || 385)) * 100);
+
+        document.getElementById('planOutputSummary').innerHTML = `每日建議份量：<br>🥫 濕糧 <span style="color:#f97316;">${canCount} 罐</span> + 🌾 乾糧 <span style="color:#f97316;">${dryGrams} 克</span><br><span style="font-size: 12px; color: #78716c;">(濕糧：${wetFood.brand} - ${wetFood.name} | 乾糧：${dryFood.brand} - ${dryFood.name})</span>`;
+      }
+    };
+
+    // 儲存「食量菜單」至「我的筆記 -> 菜單規劃區」
+    window.savePlanToProfile = function() {
+      const catName = document.getElementById('planCatName').value.trim() || '我的主子';
+      const der = document.getElementById('planDER').innerText || '259';
+      // 將 HTML 的 <br> 轉換為換行符號，以便在菜單卡片中顯示兩行
+      const summaryText = document.getElementById('planOutputSummary').innerHTML;
+      const modeNames = { dry: '全乾糧', wet: '全濕糧', mixed: '乾濕混合' };
+      
+      const plans = getLocalData(STORAGE_KEY_PLANS, []);
+      const newPlan = {
+        id: 'p_' + Date.now(),
+        catName: catName,
+        modeName: modeNames[currentPlanMode],
+        der: der,
+        summary: summaryText,
+        date: new Date().toISOString().split('T')[0]
+      };
+
+      plans.unshift(newPlan);
+      setLocalData(STORAGE_KEY_PLANS, plans);
+
+      renderNotesView();
+      showToast(`✅ 已將「${catName}」的菜單儲存至我的筆記！`);
+    };
+
+    window.deleteFeedingPlan = function(planId) {
+      let plans = getLocalData(STORAGE_KEY_PLANS, []);
+      plans = plans.filter(p => p.id !== planId);
+      setLocalData(STORAGE_KEY_PLANS, plans);
+      renderNotesView();
+      showToast('已刪除該筆菜單規劃');
+    };
+
+    // 分享糧食至公開糧食庫 / 私人庫 (加入 isPreset 狀態)
+    window.saveAndShareFood = function() {
+      const res = calc();
+      if (!res) return;
+      const brand = document.getElementById('brand').value.trim();
+      const name = document.getElementById('name').value.trim();
+      if (!brand || !name) { showToast('請填寫品牌與名稱'); return; }
+
+      const categoryNames = { wet: '🥣 主食罐', snack: '🐟 副食罐', dry: '🌾 乾糧', raw: '🥩 凍乾生肉' };
+      const newFood = {
+        id: 'f_' + Date.now(),
+        brand, name, category: currentType, categoryName: categoryNames[currentType],
+        origin: document.getElementById('origin').value.trim() || '未提供',
+        weight: document.getElementById('weight').value || '85',
+        img: document.getElementById('imageUrl').value.trim(),
+        pDMB: res.pDMB, fDMB: res.fDMB, carbDMB: res.carbDMB, kcal100g: res.kcal100g,
+        isPreset: false
+      };
+
+      // 永遠先儲存到「本機私人庫」中，確保資料並存不消失
+      const privates = getLocalData(STORAGE_KEY_PRIVATE_FOODS, []);
+      privates.unshift(newFood);
+      setLocalData(STORAGE_KEY_PRIVATE_FOODS, privates);
+
+      if (currentUser) {
+        publicFoods.unshift(newFood);
+        showToast('🚀 已分享至雲端公開糧食庫，同時保留於本機私人庫！');
+        switchDbTab('public');
+      } else {
+        showToast('💾 已儲存至「本機私人庫」！（登入後可同步至公開庫）');
+        switchDbTab('private');
+      }
+
+      switchView('db');
+    };
+
+    // 私人庫：編輯與刪除功能
+    window.deletePrivateFood = function(foodId) {
+      if(!confirm("確定要刪除這款私人庫糧食嗎？")) return;
+      let privates = getLocalData(STORAGE_KEY_PRIVATE_FOODS, []);
+      privates = privates.filter(f => f.id !== foodId);
+      setLocalData(STORAGE_KEY_PRIVATE_FOODS, privates);
+      renderDB();
+      showToast('已從私人庫刪除該糧食');
+    };
+
+    window.openEditPrivateFoodModal = function(foodId) {
+      const privates = getLocalData(STORAGE_KEY_PRIVATE_FOODS, []);
+      const food = privates.find(f => f.id === foodId);
+      if(!food) return;
+
+      document.getElementById('editFoodId').value = food.id;
+      document.getElementById('editFoodCategory').value = food.category || 'wet';
+      document.getElementById('editFoodBrand').value = food.brand || '';
+      document.getElementById('editFoodName').value = food.name || '';
+      document.getElementById('editFoodOrigin').value = food.origin || '';
+      document.getElementById('editFoodWeight').value = food.weight || '85';
+      document.getElementById('editFoodKcal').value = food.kcal100g || '';
+      document.getElementById('editFoodPDMB').value = food.pDMB || '';
+      document.getElementById('editFoodFDMB').value = food.fDMB || '';
+      document.getElementById('editFoodCarbDMB').value = food.carbDMB || '';
+      document.getElementById('editFoodImg').value = food.img || '';
+
+      const modal = document.getElementById('privateFoodModal');
+      modal.style.display = 'flex';
+      modal.classList.remove('hidden');
+    };
+
+    window.closePrivateFoodModal = function() {
+      const modal = document.getElementById('privateFoodModal');
+      modal.style.display = 'none';
+      modal.classList.add('hidden');
+    };
+
+    window.saveEditedPrivateFood = function(e) {
+      e.preventDefault();
+      const foodId = document.getElementById('editFoodId').value;
+      const category = document.getElementById('editFoodCategory').value;
+      const categoryNames = { wet: '🥣 主食罐', snack: '🐟 副食罐', dry: '🌾 乾糧', raw: '🥩 凍乾生肉' };
+
+      let privates = getLocalData(STORAGE_KEY_PRIVATE_FOODS, []);
+      privates = privates.map(f => {
+        if(f.id === foodId) {
+          return {
+            ...f,
+            category: category,
+            categoryName: categoryNames[category],
+            brand: document.getElementById('editFoodBrand').value.trim(),
+            name: document.getElementById('editFoodName').value.trim(),
+            origin: document.getElementById('editFoodOrigin').value.trim() || '未提供',
+            weight: document.getElementById('editFoodWeight').value || '85',
+            kcal100g: parseFloat(document.getElementById('editFoodKcal').value) || 0,
+            pDMB: document.getElementById('editFoodPDMB').value || '0',
+            fDMB: document.getElementById('editFoodFDMB').value || '0',
+            carbDMB: document.getElementById('editFoodCarbDMB').value || '0',
+            img: document.getElementById('editFoodImg').value.trim(),
+            isPreset: false
+          };
+        }
+        return f;
+      });
+
+      setLocalData(STORAGE_KEY_PRIVATE_FOODS, privates);
+      closePrivateFoodModal();
+      renderDB();
+      showToast('✅ 已成功修改私人糧食資料！');
+    };
+
+    // 渲染糧食庫卡片 (1列5欄，支援私人庫編輯/刪除，加入 isPreset Badge)
+    function renderDB() {
+      const container = document.getElementById('foodListContainer');
+      container.innerHTML = '';
+      const isPrivateTab = (currentDbTab === 'private');
+      const list = isPrivateTab ? getLocalData(STORAGE_KEY_PRIVATE_FOODS, []) : publicFoods;
+      
+      const badge = document.getElementById('privateCountBadge');
+      const privates = getLocalData(STORAGE_KEY_PRIVATE_FOODS, []);
+      if (privates.length > 0) {
+        badge.innerText = privates.length;
+        badge.style.display = 'inline';
+      } else {
+        badge.style.display = 'none';
+      }
+
+      if (list.length === 0) {
+        container.innerHTML = `<div style="grid-column: 1/-1; padding: 40px; text-align: center; color: #a8a29e;">目前私人庫沒有資料，去營養計算器新增一筆吧！</div>`;
+        return;
+      }
+
+      list.forEach((item) => {
+        const imgHtml = item.img ? `<div class="food-img-container"><img src="${item.img}" class="food-img" onerror="this.src='https://placehold.co/200x120/f5f5f4/a8a29e?text=CatFood'"></div>` : `<div class="food-img-container" style="color:#a8a29e; font-size: 28px;">📦</div>`;
+        const actionButtonsHtml = isPrivateTab ? `
+          <div style="display: flex; gap: 4px; margin-top: 8px; border-top: 1px dashed #e7e5e4; padding-top: 8px;">
+            <button onclick="openEditPrivateFoodModal('${item.id}')" style="flex: 1; padding: 4px; font-size: 11px; font-weight: 600; border-radius: 6px; background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; cursor: pointer;">✏️ 編輯</button>
+            <button onclick="deletePrivateFood('${item.id}')" style="flex: 1; padding: 4px; font-size: 11px; font-weight: 600; border-radius: 6px; background: #fef2f2; color: #ef4444; border: 1px solid #fee2e2; cursor: pointer;">🗑️ 刪除</button>
+          </div>
+        ` : '';
+
+        // 判斷是否為預設資料並加上對應的 Badge
+        const isPresetBadgeHtml = item.isPreset === true 
+          ? `<span style="font-size: 10px; background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-left: 4px;">📌 預設資料</span>`
+          : `<span style="font-size: 10px; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-left: 4px;">👤 用戶新增</span>`;
+
+        const card = document.createElement('div');
+        card.className = 'food-card';
+        card.setAttribute('data-category', item.category);
+        card.innerHTML = `
+          <div>
+            ${imgHtml}
+            <span style="font-size: 10px; background: #fff7ed; color: #c2410c; padding: 2px 6px; border-radius: 4px; font-weight: 700;">${item.categoryName || '🥣 糧食'}</span>
+            ${isPresetBadgeHtml}
+            <h4 style="margin: 6px 0 2px 0; font-size: 14px; color: #1c1917; font-weight: 700;">${item.brand} - ${item.name}</h4>
+            <div style="font-size: 11px; color: #78716c; margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap;">
+              <span>🌍 ${item.origin || '未提供'}</span>
+              <span>⚖️ ${item.weight || '-'}g</span>
+              <span>🔥 ${item.kcal100g || '-'} kcal/100g</span>
+            </div>
+          </div>
+          <div>
+            <div style="margin: 10px 0 4px 0; background: #fafaf9; padding: 8px; border-radius: 8px; display: flex; justify-content: space-around; text-align: center; font-size: 11px;">
+              <div>蛋白<br><strong>${item.pDMB}%</strong></div>
+              <div>脂肪<br><strong>${item.fDMB}%</strong></div>
+              <div>碳水<br><strong style="color: ${item.carbDMB <= 10 ? '#047857' : '#b45309'}">${item.carbDMB}%</strong></div>
+            </div>
+            ${actionButtonsHtml}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // 渲染「我的筆記」：主子檔案 + 獨立菜單區 + 獨立評價區
+    function renderNotesView() {
+      const cats = getLocalData(STORAGE_KEY_CATS, []);
+      const plans = getLocalData(STORAGE_KEY_PLANS, []);
+      const notes = getLocalData(STORAGE_KEY_NOTES, []);
+      
+      // 1. 渲染貓咪檔案
+      const catContainer = document.getElementById('catProfilesContainer');
+      if (cats.length === 0) {
+        catContainer.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #a8a29e; padding: 24px; background: white; border-radius: 12px; border: 1px dashed #d6d3d1;">尚未建立貓咪檔案，點擊右上角「+ 新增貓咪」開始建立專屬檔案！</div>`;
+      } else {
+        catContainer.innerHTML = cats.map(c => `
+          <div class="cat-profile-card">
+            <div class="cat-avatar">${c.name ? c.name.charAt(0) : '🐱'}</div>
+            <div style="flex: 1;">
+              <div style="font-weight: 700; font-size: 15px; display: flex; justify-content: space-between; align-items: center;">
+                <span>${c.name} <span class="badge" style="background: #e0f2fe; color: #0369a1; padding: 2px 6px; font-size: 10px;">${c.statusText || '標準'}</span></span>
+                <div>
+                  <button onclick="openCatModal('${c.id}')" style="background: none; border: none; font-size: 12px; color: #ea580c; font-weight: 600; cursor: pointer; margin-right: 8px;">✏️ 編輯</button>
+                  <button onclick="deleteCatProfile('${c.id}')" style="background: none; border: none; font-size: 12px; color: #ef4444; font-weight: 600; cursor: pointer;">🗑️ 刪除</button>
+                </div>
+              </div>
+              <div style="font-size: 12px; color: #57534e; margin-top: 4px;">體重：<strong style="color: #ea580c;">${c.weight} kg</strong> ${c.birthDate ? '| 生態: ' + c.birthDate : ''}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // 2. 獨立渲染「餵食菜單規劃」
+      const plansContainer = document.getElementById('feedingPlansContainer');
+      if (plans.length === 0) {
+        plansContainer.innerHTML = `<div style="text-align: center; color: #a8a29e; padding: 18px; font-size: 12px; background: #fafaf9; border-radius: 8px; border: 1px dashed #e7e5e4;">尚未儲存任何菜單。前往「🍽️ 食量計算器」試算後即可一鍵儲存至此！</div>`;
+      } else {
+        plansContainer.innerHTML = plans.map(p => `
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span style="font-size: 13px; font-weight: 700; color: #166534;">🐱 ${p.catName} - ${p.modeName || '菜單'} (目標 ${p.der} kcal)</span>
+                <span style="font-size: 10px; color: #15803d; background: #dcfce7; padding: 2px 6px; border-radius: 4px;">${p.date || ''}</span>
+              </div>
+              <div style="font-size: 12px; color: #14532d; font-weight: 600;">${p.summary}</div>
+            </div>
+            <button onclick="deleteFeedingPlan('${p.id}')" style="background: none; border: none; color: #ef4444; font-size: 11px; cursor: pointer; font-weight: 600; padding: 2px 6px;">🗑️ 刪除</button>
+          </div>
+        `).join('');
+      }
+
+      // 3. 獨立渲染「試吃與腸胃評價」
+      const notesContainer = document.getElementById('feedingNotesContainer');
+      if (notes.length === 0) {
+        notesContainer.innerHTML = `<div style="text-align: center; color: #a8a29e; padding: 18px; font-size: 12px; background: #fafaf9; border-radius: 8px; border: 1px dashed #e7e5e4;">尚未新增試吃評價筆記。點擊右上角「+ 新增評價筆記」記錄主子的愛吃程度！</div>`;
+      } else {
+        notesContainer.innerHTML = notes.map(n => `
+          <div style="background: #fafaf9; border: 1px solid #e7e5e4; padding: 12px; border-radius: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <h4 style="font-size: 13px; font-weight: 700; color: #1c1917;">${n.foodName}</h4>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="color: #f59e0b; font-size: 13px;">${'★'.repeat(n.rating || 5)}</div>
+                <button onclick="deleteFeedingNote('${n.id}')" style="background: none; border: none; color: #ef4444; font-size: 11px; cursor: pointer; font-weight: 600;">🗑️ 刪除</button>
+              </div>
+            </div>
+            <div style="font-size: 12px; color: #57534e;">
+              <span style="color: #c2410c; font-weight: 600;">對象：${n.catName || '主子'}</span> <span style="font-size: 10px; color: #a8a29e;">(${n.date || ''})</span><br>
+              💬 ${n.content}
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    window.deleteFeedingNote = function(noteId) {
+      let notes = getLocalData(STORAGE_KEY_NOTES, []);
+      notes = notes.filter(n => n.id !== noteId);
+      setLocalData(STORAGE_KEY_NOTES, notes);
+      renderNotesView();
+      showToast('已刪除評價筆記');
+    };
+
+    // Modal 操作邏輯
+    window.openCatModal = function(catId = null) {
+      const modal = document.getElementById('catModal');
+      const title = document.getElementById('catModalTitle');
+      
+      if (catId) {
+        title.innerText = '✏️ 編輯主子檔案';
+        const cats = getLocalData(STORAGE_KEY_CATS, []);
+        const cat = cats.find(c => c.id === catId);
+        if (cat) {
+          document.getElementById('catModalId').value = cat.id;
+          document.getElementById('catModalName').value = cat.name;
+          document.getElementById('catModalWeight').value = cat.weight;
+          document.getElementById('catModalBirthDate').value = cat.birthDate || '';
+          
+          const factorSelect = document.getElementById('catModalFactor');
+          for (let opt of factorSelect.options) {
+            if (opt.value.startsWith(cat.factor.toString())) {
+              opt.selected = true;
+              break;
+            }
+          }
+        }
+      } else {
+        title.innerText = '🐱 新增主子檔案';
+        document.getElementById('catModalId').value = '';
+        document.getElementById('catModalName').value = '';
+        document.getElementById('catModalWeight').value = '';
+        document.getElementById('catModalBirthDate').value = '';
+      }
+
+      modal.style.display = 'flex';
+      modal.classList.remove('hidden');
+    };
+
+    window.closeCatModal = function() {
+      const modal = document.getElementById('catModal');
+      modal.style.display = 'none';
+      modal.classList.add('hidden');
+    };
+
+    window.saveCatProfile = function(e) {
+      e.preventDefault();
+      const id = document.getElementById('catModalId').value;
+      const name = document.getElementById('catModalName').value.trim();
+      const weight = parseFloat(document.getElementById('catModalWeight').value) || 0;
+      const birthDate = document.getElementById('catModalBirthDate').value;
+      
+      const factorRaw = document.getElementById('catModalFactor').value.split('|');
+      const factor = parseFloat(factorRaw[0]);
+      const statusText = factorRaw[1];
+
+      if (!name || weight <= 0) {
+        showToast('請正確輸入貓咪名字與體重');
+        return;
+      }
+
+      let cats = getLocalData(STORAGE_KEY_CATS, []);
+      const targetId = id || ('c_' + Date.now());
+      const catObj = { id: targetId, name, weight, birthDate, factor, statusText };
+
+      if (id) {
+        cats = cats.map(c => c.id === id ? catObj : c);
+        showToast(`✅ 已更新「${name}」的檔案！`);
+      } else {
+        cats.push(catObj);
+        showToast(`🎉 成功建立「${name}」的專屬檔案！`);
+      }
+
+      setLocalData(STORAGE_KEY_CATS, cats);
+      closeCatModal();
+      renderNotesView();
+      setupIntakePage();
+    };
+
+    window.deleteCatProfile = function(catId) {
+      if(!confirm("確定刪除此主子檔案？")) return;
+      let cats = getLocalData(STORAGE_KEY_CATS, []);
+      cats = cats.filter(c => c.id !== catId);
+      setLocalData(STORAGE_KEY_CATS, cats);
+      renderNotesView();
+      setupIntakePage();
+      showToast('已刪除貓咪檔案');
+    };
+
+    window.openNoteModal = function() {
+      const cats = getLocalData(STORAGE_KEY_CATS, []);
+      const select = document.getElementById('noteModalCatSelect');
+      select.innerHTML = cats.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+      
+      document.getElementById('noteModalFoodName').value = '';
+      document.getElementById('noteModalContent').value = '';
+      
+      const modal = document.getElementById('noteModal');
+      modal.style.display = 'flex';
+      modal.classList.remove('hidden');
+    };
+
+    window.closeNoteModal = function() {
+      const modal = document.getElementById('noteModal');
+      modal.style.display = 'none';
+      modal.classList.add('hidden');
+    };
+
+    window.saveFeedingNote = function(e) {
+      e.preventDefault();
+      const catName = document.getElementById('noteModalCatSelect').value;
+      const foodName = document.getElementById('noteModalFoodName').value.trim();
+      const rating = parseInt(document.getElementById('noteModalRating').value) || 5;
+      const content = document.getElementById('noteModalContent').value.trim();
+
+      if (!foodName) { showToast('請填寫糧食名稱'); return; }
+
+      const notes = getLocalData(STORAGE_KEY_NOTES, []);
+      const noteObj = { id: 'n_' + Date.now(), catName, foodName, rating, content, date: new Date().toISOString().split('T')[0] };
+      notes.unshift(noteObj);
+      setLocalData(STORAGE_KEY_NOTES, notes);
+
+      closeNoteModal();
+      renderNotesView();
+      showToast('✅ 已儲存試吃評價筆記！');
+    };
+
+    // 登入 Modal
+    window.openAuthModal = function() {
+      const modal = document.getElementById('authModal');
+      modal.style.display = 'flex';
+      modal.classList.remove('hidden');
+    };
+
+    window.closeAuthModal = function() {
+      const modal = document.getElementById('authModal');
+      modal.style.display = 'none';
+      modal.classList.add('hidden');
+    };
+
+    window.handleEmailAuth = function(e) {
+      e.preventDefault();
+      const email = document.getElementById('authEmail').value.trim();
+      if(!email) return;
+
+      currentUser = { email: email, name: email.split('@')[0] };
+      document.getElementById('authStatusText').innerText = currentUser.name + ' (已同步)';
+      document.getElementById('syncBanner').style.background = '#ecfdf5';
+      document.getElementById('syncBanner').style.color = '#047857';
+      document.getElementById('syncBanner').innerText = `✓ 雲端同步模式 (帳號: ${email})`;
+      
+      closeAuthModal();
+      showToast('🎉 登入成功！已啟動 Supabase 雲端同步');
+    };
+
+    window.loginWithGoogle = async function() {
+      if (!supabaseClient) {
+        showToast('⚠️ 請先在程式碼上方設定正確的 Supabase URL 與 KEY');
+        return;
+      }
+      try {
+        const { data, error } = await supabaseClient.auth.signInWithOAuth({
+          provider: 'google',
+        });
+        if (error) throw error;
+        // 登入成功後，Supabase 會自動重導向
+      } catch (error) {
+        showToast('Google 登入失敗: ' + error.message);
+      }
+    };
+
+    // 工具輔助函數
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.style.opacity = '1';
+      setTimeout(() => t.style.opacity = '0', 2500);
+    }
+
+    window.filterDB = function() {
+      const q = document.getElementById('dbSearch').value.toLowerCase();
+      const cat = document.getElementById('dbCategoryFilter').value;
+      const cards = document.querySelectorAll('#foodListContainer .food-card');
+      cards.forEach(c => {
+        const textMatch = c.innerText.toLowerCase().includes(q);
+        const catMatch = (cat === 'all') || (c.getAttribute('data-category') === cat);
+        c.style.display = (textMatch && catMatch) ? 'flex' : 'none';
+      });
+    };
+
+    window.handleFileUpload = function(e) { 
+      if(e.target.files[0]) { 
+        const r = new FileReader(); 
+        r.onload = (ev) => { 
+          document.getElementById('imageUrl').value = ev.target.result; 
+          updateImagePreview(); 
+        }; 
+        r.readAsDataURL(e.target.files[0]); 
+      } 
+    };
+
+    window.updateImagePreview = function() { 
+      const v = document.getElementById('imageUrl').value; 
+      document.getElementById('imgPreviewBox').style.display = v ? 'flex' : 'none'; 
+      document.getElementById('imgPreview').src = v; 
+    };
+
+    window.clearImage = function() { 
+      document.getElementById('imageUrl').value = ''; 
+      updateImagePreview(); 
+    };
+    
+    window.loadSample = function(type) {
+      if (type === 'wet') {
+        document.getElementById('brand').value = '汪喵星球'; document.getElementById('name').value = '幼母貓主食罐';
+        document.getElementById('p').value = '13.5'; document.getElementById('f').value = '5.7'; document.getElementById('fib').value = '0.5'; document.getElementById('ash').value = '1.8'; document.getElementById('m').value = '78.0'; document.getElementById('officialKcal').value = '110';
+      } else if (type === 'dry') {
+        document.getElementById('brand').value = 'Orijen 渴望'; document.getElementById('name').value = '八種守護全貓糧';
+        document.getElementById('p').value = '40.0'; document.getElementById('f').value = '18.0'; document.getElementById('fib').value = '3.0'; document.getElementById('ash').value = '9.0'; document.getElementById('m').value = '10.0'; document.getElementById('officialKcal').value = '385';
+      }
+      calc();
+    };
+
+    // 頁面初始化
+    window.onload = () => {
+      initializeLocalStore();
+      document.getElementById('view-calc').classList.remove('hidden');
+      calc();
+    };
+  </script>
+</body>
+</html>
