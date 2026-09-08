@@ -1757,7 +1757,6 @@ function updateAuthState(session) {
     }
   }
 }
-};
 
     // 工具輔助函數
     function showToast(msg) {
@@ -1816,6 +1815,7 @@ function updateAuthState(session) {
       initializeLocalStore();
       document.getElementById('view-calc').classList.remove('hidden');
       calc();
+      initializeAuth();
     };
   </script>
 </body>
