@@ -414,7 +414,7 @@
         </div>
       </div>
       <div>
-        <button id="navLoginBtn" onclick="openAuthModal()" style="padding: 7px 14px; font-size: 12px; font-weight: 600; border-radius: 8px; border: 1px solid #d6d3d1; background: white; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+        <button id="navLoginBtn" onclick="handleAuthButtonClick()" style="padding: 7px 14px; font-size: 12px; font-weight: 600; border-radius: 8px; border: 1px solid #d6d3d1; background: white; cursor: pointer; display: flex; align-items: center; gap: 6px;">
           <span>👤</span> <span id="authStatusText">登入 / 雲端同步</span>
         </button>
       </div>
@@ -1763,6 +1763,33 @@
       modal.classList.add('hidden');
     };
 
+    window.handleAuthButtonClick = function() {
+      if (currentUser) {
+        signOutUser();
+      } else {
+        openAuthModal();
+      }
+    };
+
+    window.signOutUser = async function() {
+      if (!supabaseClient) {
+        currentUser = null;
+        updateAuthState(null);
+        showToast('已離線登出；本機資料仍然保留');
+        return;
+      }
+
+      const { error } = await supabaseClient.auth.signOut();
+      if (error) {
+        console.error('登出失敗:', error);
+        showToast('登出失敗：' + error.message);
+        return;
+      }
+
+      // signOut 會觸發 SIGNED_OUT，這裡不清除 localStorage。
+      showToast('✅ 已登出；本機資料仍然保留');
+    };
+
     window.handleEmailAuth = function(e) {
       e.preventDefault();
       const email = document.getElementById('authEmail').value.trim();
@@ -1833,15 +1860,20 @@ function updateAuthState(session) {
 
   console.log('目前登入狀態:', currentUser);
 
-  const statusText = document.getElementById('authStatusText');
-  const syncBanner = document.getElementById('syncBanner');
+      const statusText = document.getElementById('authStatusText');
+      const syncBanner = document.getElementById('syncBanner');
+      const navLoginBtn = document.getElementById('navLoginBtn');
 
-  if (currentUser) {
-    const email = currentUser.email || 'Google 使用者';
+      if (currentUser) {
+        const email = currentUser.email || 'Google 使用者';
 
-    if (statusText) {
-      statusText.innerText = email + ' (已登入)';
-    }
+        if (statusText) {
+          statusText.innerText = email + ' (按此登出)';
+        }
+
+        if (navLoginBtn) {
+          navLoginBtn.title = '按此登出';
+        }
 
     if (syncBanner) {
       syncBanner.style.background = '#ecfdf5';
@@ -1851,6 +1883,10 @@ function updateAuthState(session) {
   } else {
     if (statusText) {
       statusText.innerText = '登入 / 雲端同步';
+    }
+
+    if (navLoginBtn) {
+      navLoginBtn.title = '登入 / 雲端同步';
     }
 
     if (syncBanner) {
