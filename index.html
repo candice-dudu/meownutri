@@ -957,8 +957,8 @@
 
   <script>
     // Supabase 設定
-    const SUPABASE_URL = "https://your-supabase-url.supabase.co";
-    const SUPABASE_ANON_KEY = "your-anon-key";
+    const SUPABASE_URL = "jmeatnsvtgsutwcrjtzw.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImptZWF0bnN2dGdzdXR3Y3JqdHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NDEzMDIsImV4cCI6MjEwNDQxNzMwMn0.Zjm9l4cJrumoNgr402t47VqFFY_3Rme4uPNbvY2Dvok";
     let supabaseClient = null;
     let currentUser = null;
 
@@ -1681,20 +1681,25 @@
     };
 
     window.loginWithGoogle = async function() {
-      if (!supabaseClient) {
-        showToast('⚠️ 請先在程式碼上方設定正確的 Supabase URL 與 KEY');
-        return;
+  if (!supabaseClient) {
+    showToast('⚠️ Supabase 尚未設定');
+    return;
+  }
+
+  try {
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin + window.location.pathname
       }
-      try {
-        const { data, error } = await supabaseClient.auth.signInWithOAuth({
-          provider: 'google',
-        });
-        if (error) throw error;
-        // 登入成功後，Supabase 會自動重導向
-      } catch (error) {
-        showToast('Google 登入失敗: ' + error.message);
-      }
-    };
+    });
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Google 登入失敗:', error);
+    showToast('Google 登入失敗：' + error.message);
+  }
+};
 
     // 工具輔助函數
     function showToast(msg) {
