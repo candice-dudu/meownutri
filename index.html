@@ -1138,6 +1138,48 @@
       syncBanner.innerText = message;
     }
 
+    function mapPublicFoodRow(row) {
+      return {
+        id: row.id,
+        brand: row.brand,
+        name: row.name,
+        category: row.category,
+        categoryName: row.category_name || '🥣 糧食',
+        origin: row.origin || '未提供',
+        weight: row.weight ?? '',
+        kcal100g: row.kcal100g ?? 0,
+        pDMB: row.p_dmb ?? '0',
+        fDMB: row.f_dmb ?? '0',
+        carbDMB: row.carb_dmb ?? '0',
+        img: row.image_url || '',
+        isPreset: false,
+        createdBy: row.created_by || null
+      };
+    }
+
+    async function loadPublicFoods() {
+      if (!supabaseClient) return;
+
+      const { data, error } = await supabaseClient
+        .from('public_foods')
+        .select('*')
+        .eq('is_approved', true)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('公開糧食庫讀取失敗:', error);
+        return;
+      }
+
+      const presetFoods = publicFoods.filter(food => food.isPreset === true);
+      publicFoods = [
+        ...presetFoods,
+        ...(data || []).map(mapPublicFoodRow)
+      ];
+
+      if (typeof renderDB === 'function') renderDB();
+    }
+
     // 初始化本機資料
     function initializeLocalStore() {
       if (!localStorage.getItem(STORAGE_KEY_CATS)) {
@@ -1424,7 +1466,7 @@
     };
 
     // 分享糧食至公開糧食庫 / 私人庫 (加入 isPreset 狀態)
-    window.saveAndShareFood = function() {
+    window.saveAndShareFood = async function() {
       const res = calc();
       if (!res) return;
       const brand = document.getElementById('brand').value.trim();
@@ -1448,10 +1490,36 @@
       setLocalData(STORAGE_KEY_PRIVATE_FOODS, privates);
       queueCloudUpload();
 
-      if (currentUser) {
-        publicFoods.unshift(newFood);
-        showToast('🚀 已分享至雲端公開糧食庫，同時保留於本機私人庫！');
-        switchDbTab('public');
+      if (currentUser && supabaseClient) {
+        const { data: insertedRow, error } = await supabaseClient
+          .from('public_foods')
+          .insert({
+            created_by: currentUser.id,
+            brand: newFood.brand,
+            name: newFood.name,
+            category: newFood.category,
+            category_name: newFood.categoryName,
+            origin: newFood.origin,
+            weight: parseFloat(newFood.weight) || null,
+            kcal100g: parseFloat(newFood.kcal100g) || null,
+            p_dmb: parseFloat(newFood.pDMB) || null,
+            f_dmb: parseFloat(newFood.fDMB) || null,
+            carb_dmb: parseFloat(newFood.carbDMB) || null,
+            image_url: newFood.img || null,
+            is_approved: true
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('公開糧食提交失敗:', error);
+          showToast('⚠️ 已保存至私人庫，但公開分享失敗：' + error.message);
+          switchDbTab('private');
+        } else {
+          publicFoods.unshift(mapPublicFoodRow(insertedRow));
+          showToast('🚀 已分享至公開糧食庫，同時保留於本機私人庫！');
+          switchDbTab('public');
+        }
       } else {
         showToast('💾 已儲存至「本機私人庫」！（登入後可同步至公開庫）');
         switchDbTab('private');
@@ -2005,6 +2073,7 @@ function updateAuthState(session) {
       initializeLocalStore();
       document.getElementById('view-calc').classList.remove('hidden');
       calc();
+      loadPublicFoods();
       initializeAuth();
     };
   </script>
