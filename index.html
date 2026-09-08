@@ -957,7 +957,7 @@
 
   <script>
     // Supabase 設定
-    const SUPABASE_URL = "jmeatnsvtgsutwcrjtzw.supabase.co";
+    const SUPABASE_URL = "https://jmeatnsvtgsutwcrjtzw.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImptZWF0bnN2dGdzdXR3Y3JqdHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NDEzMDIsImV4cCI6MjEwNDQxNzMwMn0.Zjm9l4cJrumoNgr402t47VqFFY_3Rme4uPNbvY2Dvok";
     let supabaseClient = null;
     let currentUser = null;
@@ -1680,7 +1680,7 @@
       showToast('🎉 登入成功！已啟動 Supabase 雲端同步');
     };
 
-    window.loginWithGoogle = async function() {
+window.loginWithGoogle = async function() {
   if (!supabaseClient) {
     showToast('⚠️ Supabase 尚未設定');
     return;
@@ -1699,6 +1699,64 @@
     console.error('Google 登入失敗:', error);
     showToast('Google 登入失敗：' + error.message);
   }
+};
+
+async function initializeAuth() {
+  if (!supabaseClient) {
+    currentUser = null;
+    return;
+  }
+
+  const {
+    data: { session }
+  } = await supabaseClient.auth.getSession();
+
+  updateAuthState(session);
+
+  supabaseClient.auth.onAuthStateChange((event, nextSession) => {
+    updateAuthState(nextSession);
+
+    if (event === 'SIGNED_IN') {
+      showToast('✅ Google 登入成功');
+    }
+
+    if (event === 'SIGNED_OUT') {
+      showToast('已登出，繼續使用本機模式');
+    }
+  });
+}
+
+function updateAuthState(session) {
+  currentUser = session?.user || null;
+
+  console.log('目前登入狀態:', currentUser);
+
+  const statusText = document.getElementById('authStatusText');
+  const syncBanner = document.getElementById('syncBanner');
+
+  if (currentUser) {
+    const email = currentUser.email || 'Google 使用者';
+
+    if (statusText) {
+      statusText.innerText = email + ' (已登入)';
+    }
+
+    if (syncBanner) {
+      syncBanner.style.background = '#ecfdf5';
+      syncBanner.style.color = '#047857';
+      syncBanner.innerText = '✓ 已登入；雲端同步功能準備中';
+    }
+  } else {
+    if (statusText) {
+      statusText.innerText = '登入 / 雲端同步';
+    }
+
+    if (syncBanner) {
+      syncBanner.innerText =
+        '💡 本機離線模式（免登入即可使用全部功能）。登入後可啟用跨裝置雲端同步！';
+    }
+  }
+}
 };
 
     // 工具輔助函數
