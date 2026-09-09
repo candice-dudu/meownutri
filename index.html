@@ -689,7 +689,7 @@
 
             <div id="planSecDry" class="plan-section">
               <div class="form-group" style="margin-bottom: 12px;">
-                <label>選擇乾糧 (連動糧食庫)</label>
+                <label>選擇乾糧 (自糧食庫)</label>
                 <select id="selectDryFood" onchange="recalcPlanFoodIntake()"></select>
               </div>
               <div style="font-size: 12px; color: #57534e; margin-bottom: 12px; background: #f5f5f4; padding: 8px 12px; border-radius: 8px;">
@@ -699,7 +699,7 @@
 
             <div id="planSecWet" class="plan-section hidden">
               <div class="form-group" style="margin-bottom: 12px;">
-                <label>選擇濕糧/主食罐 (連動糧食庫)</label>
+                <label>選擇濕糧/主食罐 (自糧食庫)</label>
                 <select id="selectWetFood" onchange="recalcPlanFoodIntake()"></select>
               </div>
               <div style="font-size: 12px; color: #57534e; margin-bottom: 12px; background: #f5f5f4; padding: 8px 12px; border-radius: 8px;">
@@ -726,7 +726,7 @@
             </div>
 
             <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 16px; margin-top: 14px;">
-              <div style="font-size: 13px; font-weight: 700; color: #047857; margin-bottom: 8px;">📋 每日黃金餵食建議份量：</div>
+              <div style="font-size: 13px; font-weight: 700; color: #047857; margin-bottom: 8px;">📋 每日餵食建議份量：</div>
               <div id="planOutputSummary" style="font-size: 16px; font-weight: 800; color: #065f46; line-height: 1.5;">
                 每日乾糧：約 67 克
               </div>
@@ -989,7 +989,7 @@
 
     // 預設公開糧食庫 (加上 isPreset 標記)
     let publicFoods = [
-      { id: 'p1', brand: 'Thrive 脆樂芙', name: '純雞胸肉主食罐', category: 'wet', categoryName: '🥣 主食罐', weight: '75', origin: '英國製造', img: 'https://jmeatnsvtgsutwcrjtzw.supabase.co/storage/v1/object/public/foodphoto/thrive001.jpg?w=300&q=100', pDMB: '76.5', fDMB: '11.8', carbDMB: '1.2', p: 16.5, f: 2.0, fib: 0.1, ash: 1.5, m: 80.0, kcal100g: 96, isPreset: true },
+       { id: 'p1', brand: 'Thrive 脆樂芙', name: '純雞胸肉主食罐', category: 'wet', categoryName: '🥣 主食罐', weight: '75', origin: '英國製造', img: 'https://jmeatnsvtgsutwcrjtzw.supabase.co/storage/v1/object/public/foodphoto/thrive001.jpg?w=300&q=100', pDMB: '76.5', fDMB: '11.8', carbDMB: '1.2', p: 16.5, f: 2.0, fib: 0.1, ash: 1.5, m: 80.0, kcal100g: 96, isPreset: true },
       { id: 'p2', brand: 'Orijen 渴望', name: '八種守護全貓糧', category: 'dry', categoryName: '🌾 乾糧', weight: '1800', origin: '加拿大製造', img: 'https://jmeatnsvtgsutwcrjtzw.supabase.co/storage/v1/object/public/foodphoto/orijen001.jpg?w=300&q=100', pDMB: '44.4', fDMB: '20.0', carbDMB: '21.1', p: 40.0, f: 18.0, fib: 3.0, ash: 9.0, m: 10.0, kcal100g: 385, isPreset: true },
       { id: 'p3', brand: 'ZiwiPeak 巔峰', name: '牛肉全貓風乾生肉糧', category: 'raw', categoryName: '🥩 凍乾生肉', weight: '400', origin: '紐西蘭製造', img: 'https://jmeatnsvtgsutwcrjtzw.supabase.co/storage/v1/object/public/foodphoto/ziwi001.jpg?w=300&q=100', pDMB: '43.0', fDMB: '35.0', carbDMB: '2.0', p: 38.0, f: 31.0, fib: 2.0, ash: 12.0, m: 14.0, kcal100g: 480, isPreset: true },
      
@@ -1326,7 +1326,7 @@
 
       const kcal100g = Math.round((p * 3.5) + (f * 8.5) + (carbWet * 3.5));
       globalCalculatedKcal100g = kcal100g;
-      globalFoodWeight = weight > 0 ? weight : (currentType === 'dry' ? 1000 : 85);
+      globalFoodWeight = weight > 0 ? weight : (isDryLikeCategory(currentType) ? 1000 : 85);
 
       document.getElementById('resP').innerText = pDMB;
       document.getElementById('resF').innerText = fDMB;
@@ -1391,7 +1391,7 @@
 
       const mixedReference = document.getElementById('mixedFeedingReference');
       const mixedDescription = document.getElementById('mixedFeedingDescription');
-      const isWetLikeFood = currentType !== 'dry';
+      const isWetLikeFood = !isDryLikeCategory(currentType);
       if (mixedReference) mixedReference.style.display = isWetLikeFood ? 'block' : 'none';
       if (mixedDescription && isWetLikeFood) {
         mixedDescription.innerText = currentType === 'wet'
@@ -1402,7 +1402,7 @@
       if(globalCalculatedKcal100g > 0) {
         const reqGrams = (der / globalCalculatedKcal100g) * 100;
         document.getElementById('feedGrams').innerText = Math.round(reqGrams);
-        if(currentType === 'dry') {
+        if(isDryLikeCategory(currentType)) {
           document.getElementById('feedCansRow').style.display = 'none';
           document.getElementById('mixedDryGrams').innerText = '—';
         } else {
@@ -1447,6 +1447,10 @@
       return [...publicFoods, ...privates];
     }
 
+    function isDryLikeCategory(category) {
+      return category === 'dry' || category === 'raw';
+    }
+
     function calculateEnergyRequirements(weight, factor) {
       const safeWeight = Number(weight) > 0 ? Number(weight) : 4.5;
       const safeFactor = Number(factor) > 0 ? Number(factor) : 1.2;
@@ -1460,15 +1464,15 @@
     function populateQuickDryFoodOptions() {
       const select = document.getElementById('quickDryFood');
       if (!select) return;
-      const drys = getAllAvailableFoods().filter(food => food.category === 'dry');
+      const drys = getAllAvailableFoods().filter(food => isDryLikeCategory(food.category));
       select.innerHTML = `<option value="default">標準乾糧 (385 kcal/100g)</option>` +
         drys.map(food => `<option value="${food.id}">${food.brand} - ${food.name} (${food.kcal100g || 385} kcal/100g)</option>`).join('');
     }
 
     function populateFoodDropdowns() {
       const foods = getAllAvailableFoods();
-      const drys = foods.filter(f => f.category === 'dry');
-      const wets = foods.filter(f => f.category === 'wet' || f.category === 'snack' || f.category === 'raw');
+      const drys = foods.filter(f => isDryLikeCategory(f.category));
+      const wets = foods.filter(f => f.category === 'wet' || f.category === 'snack');
 
       const dryOptions = drys.map(f => `<option value="${f.id}">${f.brand} - ${f.name} (${f.kcal100g || 385} kcal/100g)</option>`).join('') || `<option value="default">標準通用乾糧 (385 kcal/100g)</option>`;
       const wetOptions = wets.map(f => `<option value="${f.id}">${f.brand} - ${f.name} (${f.weight || 85}g | ${f.kcal100g || 95} kcal/100g)</option>`).join('') || `<option value="default">標準通用主食罐 (85g | 93 kcal/100g)</option>`;
@@ -1807,7 +1811,7 @@
                   <button onclick="deleteCatProfile('${c.id}')" style="background: none; border: none; font-size: 12px; color: #ef4444; font-weight: 600; cursor: pointer;">🗑️ 刪除</button>
                 </div>
               </div>
-              <div style="font-size: 12px; color: #57534e; margin-top: 4px;">體重：<strong style="color: #ea580c;">${c.weight} kg</strong> ${c.birthDate ? '| 生態: ' + c.birthDate : ''}</div>
+              <div style="font-size: 12px; color: #57534e; margin-top: 4px;">體重：<strong style="color: #ea580c;">${c.weight} kg</strong> ${c.birthDate ? '| 出生: ' + c.birthDate : ''}</div>
             </div>
           </div>
         `).join('');
@@ -1816,13 +1820,13 @@
       // 2. 獨立渲染「餵食菜單規劃」
       const plansContainer = document.getElementById('feedingPlansContainer');
       if (plans.length === 0) {
-        plansContainer.innerHTML = `<div style="text-align: center; color: #a8a29e; padding: 18px; font-size: 12px; background: #fafaf9; border-radius: 8px; border: 1px dashed #e7e5e4;">尚未儲存任何菜單。前往「🍽️ 食量計算器」試算後即可一鍵儲存至此！</div>`;
+        plansContainer.innerHTML = `<div style="text-align: center; color: #a8a29e; padding: 18px; font-size: 12px; background: #fafaf9; border-radius: 8px; border: 1px dashed #e7e5e4;">尚未儲存任何餐單。前往「🍽️ 食量計算器」試算後即可一鍵儲存至此！</div>`;
       } else {
         plansContainer.innerHTML = plans.map(p => `
           <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
               <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                <span style="font-size: 13px; font-weight: 700; color: #166534;">🐱 ${p.catName} - ${p.modeName || '菜單'} (目標 ${p.der} kcal)</span>
+                <span style="font-size: 13px; font-weight: 700; color: #166534;">🐱 ${p.catName} - ${p.modeName || '餐單'} (目標 ${p.der} kcal)</span>
                 <span style="font-size: 10px; color: #15803d; background: #dcfce7; padding: 2px 6px; border-radius: 4px;">${p.date || ''}</span>
               </div>
               <div style="font-size: 12px; color: #14532d; font-weight: 600;">${p.summary}</div>
