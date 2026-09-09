@@ -2,7 +2,7 @@
 <html lang="zh-HK">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>喵營 MeowNutri</title>
   
 <!-- iPhone 加入主畫面後的圖示設定 -->
@@ -31,6 +31,7 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow-x: hidden;
     }
     header {
       background-color: #ffffff;
@@ -100,6 +101,19 @@
     .tab-btn.active {
       color: #ea580c;
       border-bottom-color: #f97316;
+    }
+
+    @media (max-width: 849px) {
+      html, body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+        overscroll-behavior-x: none;
+        touch-action: pan-y;
+      }
+      .nav-tabs {
+        overflow-x: hidden;
+      }
     }
     
     /* 頂部同步狀態橫幅 */
@@ -457,11 +471,11 @@
               </div>
               <div class="form-group">
                 <label>容量 (克 g)</label>
-                <input type="number" id="weight" value="85">
+                <input type="number" min="0" id="weight" value="85">
               </div>
               <div class="form-group">
                 <label>售價 (HKD $)</label>
-                <input type="number" id="price" placeholder="18">
+                <input type="number" min="0" id="price" placeholder="18">
               </div>
               <div class="form-group">
                 <label>產地 (Origin)</label>
@@ -492,33 +506,34 @@
             <div class="input-grid">
               <div class="form-group">
                 <label>粗蛋白質 (Min %)</label>
-                <input type="number" step="0.1" id="p" value="11.5">
+                <input type="number" min="0" max="100" step="0.1" id="p" value="11.5">
               </div>
               <div class="form-group">
                 <label>粗脂肪 (Min %)</label>
-                <input type="number" step="0.1" id="f" value="5.5">
+                <input type="number" min="0" max="100" step="0.1" id="f" value="5.5">
               </div>
               <div class="form-group">
                 <label>粗纖維 (Max %)</label>
-                <input type="number" step="0.1" id="fib" value="0.4">
+                <input type="number" min="0" max="100" step="0.1" id="fib" value="0.4">
               </div>
               <div class="form-group">
                 <label>粗灰分 (Max %)</label>
-                <input type="number" step="0.1" id="ash" value="2.0">
+                <input type="number" min="0" max="100" step="0.1" id="ash" value="2.0">
                 <span style="font-size: 10px; color: #dc2626; margin-top: 2px; line-height: 1.3;">💡 如沒有列出灰粉含量時，可以8% （乾糧）或2.5% （罐頭）代替</span>
               </div>
               <div class="form-group">
                 <label>水分 (Max %)</label>
-                <input type="number" step="0.1" id="m" value="80.0">
+                <input type="number" min="0" max="99.9" step="0.1" id="m" value="80.0">
               </div>
               <div class="form-group">
                 <label>官方熱量 (kcal/100g)</label>
-                <input type="number" id="officialKcal" placeholder="選填 (如 95)">
+                <input type="number" min="0" id="officialKcal" placeholder="選填 (如 95)">
               </div>
             </div>
 
             <button class="btn-action btn-primary" onclick="calc()">⚡ 立即換算 DMB 乾物質</button>
             <button class="btn-action btn-share" onclick="saveAndShareFood()">🌐 換算並儲存至本機私人庫</button>
+            <button class="btn-action btn-secondary" onclick="clearCalculator()">🧹 清除</button>
             <div style="display: flex; gap: 8px;">
               <button class="btn-action btn-secondary" onclick="loadSample('wet')">載入主食罐範例</button>
               <button class="btn-action btn-secondary" onclick="loadSample('dry')">載入乾糧範例</button>
@@ -551,7 +566,7 @@
               <div id="kcalDiffBox" style="margin-bottom: 6px; display: none;" class="badge"></div>
               <div style="margin-bottom: 4px;">💰 每 100g 均價：<strong id="resUnitPrice">未輸入</strong></div>
               <div id="advice" style="margin-top: 10px; padding: 8px; background: #fafaf9; border-radius: 8px; font-size: 11px; color: #57534e;">
-                提示：極低碳水糧食，非常適合貓咪優質蛋白質攝取！
+                提示：低碳水糧食，碳水 DMB ≤ 10%。
               </div>
             </div>
           </div>
@@ -575,6 +590,12 @@
                   <option value="2.5">幼貓 成長期 (F=2.5)</option>
                 </select>
               </div>
+              <div class="form-group">
+                <label>混合餵食乾糧</label>
+                <select id="quickDryFood" onchange="calcIntake()">
+                  <option value="default">標準乾糧 (385 kcal/100g)</option>
+                </select>
+              </div>
             </div>
             <div style="background: #fafaf9; border: 1px solid #e7e5e4; border-radius: 12px; padding: 12px;">
               <div style="text-align: center; margin-bottom: 12px; border-bottom: 1px dashed #d6d3d1; padding-bottom: 10px;">
@@ -585,10 +606,10 @@
                 <div style="font-weight: 700; margin-bottom: 4px; color: #1c1917;">🍽️ 若全部餵食這款糧食：</div>
                 <div>▸ 每日需餵食約：<strong style="color: #059669; font-size: 14px;" id="feedGrams">278</strong> 克</div>
                 <div id="feedCansRow">▸ 換算成包裝：<strong style="color: #059669; font-size: 14px;" id="feedCans">3.3</strong> 罐 / 包</div>
-                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e7e5e4;">
-                  <div style="font-weight: 700; margin-bottom: 4px; color: #1c1917;">🥣 半濕半乾混合餵食參考：</div>
-                  <div style="font-size: 11px; color: #57534e;">若每天固定餵 1 罐主食罐 (假設 80kcal)</div>
-                  <div>▸ 剩餘需補充乾糧約：<strong id="mixedDryGrams">46</strong> 克 <span style="font-size: 10px; color: #a8a29e;">(以 3.85kcal/g 估算)</span></div>
+                <div id="mixedFeedingReference" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e7e5e4;">
+                  <div id="mixedFeedingTitle" style="font-weight: 700; margin-bottom: 4px; color: #1c1917;">🥣 乾濕混合餵食參考：</div>
+                  <div id="mixedFeedingDescription" style="font-size: 11px; color: #57534e;">若每天固定餵 1 份目前糧食，再用所選乾糧補足</div>
+                  <div>▸ 剩餘需補充乾糧約：<strong id="mixedDryGrams">46</strong> 克 <span style="font-size: 10px; color: #a8a29e;">(按所選乾糧熱量計算)</span></div>
                 </div>
               </div>
             </div>
@@ -793,22 +814,10 @@
       <h3 style="font-size: 18px; font-weight: 700; color: #1c1917; margin-bottom: 6px; text-align: center;">☁️ 雲端帳號備份</h3>
       <p style="font-size: 12px; color: #78716c; margin-bottom: 16px; text-align: center;">登入後可同步主子資料至雲端，並分享糧食至公開庫。</p>
 
-      <form onsubmit="handleEmailAuth(event)">
-        <div class="form-group" style="margin-bottom: 10px;">
-          <label>電郵地址 (Email)</label>
-          <input type="email" id="authEmail" required placeholder="meow@example.com">
-        </div>
-        <div class="form-group" style="margin-bottom: 14px;">
-          <label>密碼 (Password)</label>
-          <input type="password" id="authPassword" required placeholder="包含至少6位字元">
-        </div>
-        <button type="submit" class="btn-action btn-primary">⚡ 電郵登入 / 註冊</button>
-      </form>
-
-      <div style="position: relative; text-align: center; margin: 16px 0;">
-        <span style="background: white; padding: 0 8px; font-size: 11px; color: #a8a29e; position: relative; z-index: 1;">或使用快捷登入</span>
-        <div style="position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: #e7e5e4;"></div>
-      </div>
+      <p style="font-size: 12px; color: #78716c; line-height: 1.6; margin-bottom: 14px; text-align: center;">
+        免登入即可使用全部功能。<br>
+        使用 Google 登入可啟用雲端備份、跨裝置同步及公開分享。
+      </p>
 
       <button onclick="loginWithGoogle()" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #d6d3d1; background: white; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
         <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
@@ -980,11 +989,10 @@
 
     // 預設公開糧食庫 (加上 isPreset 標記)
     let publicFoods = [
-      { id: 'p1', brand: 'Thrive 脆樂芙', name: '純雞胸肉主食罐', category: 'wet', categoryName: '🥣 主食罐', weight: '75', origin: '英國製造', img: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=300&q=80', pDMB: '76.5', fDMB: '11.8', carbDMB: '1.2', p: 16.5, f: 2.0, fib: 0.1, ash: 1.5, m: 80.0, kcal100g: 96, isPreset: true },
-      { id: 'p2', brand: 'Orijen 渴望', name: '八種守護全貓糧', category: 'dry', categoryName: '🌾 乾糧', weight: '1800', origin: '加拿大製造', img: 'https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=300&q=80', pDMB: '44.4', fDMB: '20.0', carbDMB: '21.1', p: 40.0, f: 18.0, fib: 3.0, ash: 9.0, m: 10.0, kcal100g: 385, isPreset: true },
-      { id: 'p3', brand: '汪喵星球', name: '幼母貓營養主食罐', category: 'wet', categoryName: '🥣 主食罐', weight: '80', origin: '台灣製造', img: 'https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=300&q=80', pDMB: '62.0', fDMB: '26.0', carbDMB: '4.1', p: 13.5, f: 5.7, fib: 0.5, ash: 1.8, m: 78.0, kcal100g: 110, isPreset: true },
-      { id: 'p4', brand: 'ZiwiPeak 巔峰', name: '牛肉全貓風乾生肉糧', category: 'raw', categoryName: '🥩 凍乾生肉', weight: '400', origin: '紐西蘭製造', img: 'https://images.unsplash.com/photo-1535268647677-300dbf3d78d1?w=300&q=80', pDMB: '43.0', fDMB: '35.0', carbDMB: '2.0', p: 38.0, f: 31.0, fib: 2.0, ash: 12.0, m: 14.0, kcal100g: 480, isPreset: true },
-      { id: 'p5', brand: 'Wellness CORE', name: '無穀低敏雞肉主食罐', category: 'wet', categoryName: '🥣 主食罐', weight: '156', origin: '美國製造', img: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=300&q=80', pDMB: '54.5', fDMB: '31.8', carbDMB: '3.5', p: 12.0, f: 7.0, fib: 1.0, ash: 2.0, m: 78.0, kcal100g: 105, isPreset: true }
+      { id: 'p1', brand: 'Thrive 脆樂芙', name: '純雞胸肉主食罐', category: 'wet', categoryName: '🥣 主食罐', weight: '75', origin: '英國製造', img: 'https://jmeatnsvtgsutwcrjtzw.supabase.co/storage/v1/object/public/foodphoto/thrive001.jpg?w=300&q=100', pDMB: '76.5', fDMB: '11.8', carbDMB: '1.2', p: 16.5, f: 2.0, fib: 0.1, ash: 1.5, m: 80.0, kcal100g: 96, isPreset: true },
+      { id: 'p2', brand: 'Orijen 渴望', name: '八種守護全貓糧', category: 'dry', categoryName: '🌾 乾糧', weight: '1800', origin: '加拿大製造', img: 'https://jmeatnsvtgsutwcrjtzw.supabase.co/storage/v1/object/public/foodphoto/orijen001.jpg?w=300&q=100', pDMB: '44.4', fDMB: '20.0', carbDMB: '21.1', p: 40.0, f: 18.0, fib: 3.0, ash: 9.0, m: 10.0, kcal100g: 385, isPreset: true },
+      { id: 'p3', brand: 'ZiwiPeak 巔峰', name: '牛肉全貓風乾生肉糧', category: 'raw', categoryName: '🥩 凍乾生肉', weight: '400', origin: '紐西蘭製造', img: 'https://jmeatnsvtgsutwcrjtzw.supabase.co/storage/v1/object/public/foodphoto/ziwi001.jpg?w=300&q=100', pDMB: '43.0', fDMB: '35.0', carbDMB: '2.0', p: 38.0, f: 31.0, fib: 2.0, ash: 12.0, m: 14.0, kcal100g: 480, isPreset: true },
+     
     ];
 
     function getLocalData(key, defaultValue) {
@@ -1177,6 +1185,7 @@
         ...(data || []).map(mapPublicFoodRow)
       ];
 
+      populateQuickDryFoodOptions();
       if (typeof renderDB === 'function') renderDB();
     }
 
@@ -1241,7 +1250,62 @@
       calc();
     };
 
+    function validateNutritionInputs() {
+      const fields = [
+        { id: 'p', label: '粗蛋白質' },
+        { id: 'f', label: '粗脂肪' },
+        { id: 'fib', label: '粗纖維' },
+        { id: 'ash', label: '粗灰分' },
+        { id: 'm', label: '水分' }
+      ];
+      const values = {};
+
+      for (const field of fields) {
+        const raw = document.getElementById(field.id).value.trim();
+        const value = raw === '' ? 0 : Number(raw);
+        if (!Number.isFinite(value)) {
+          return `${field.label}必須是有效數字。`;
+        }
+        if (value < 0) {
+          return `${field.label}不可輸入負數。`;
+        }
+        if (value > 100) {
+          return `${field.label}不可超過 100%。`;
+        }
+        values[field.id] = value;
+      }
+
+      if (values.m >= 100) {
+        return '水分必須低於 100%。';
+      }
+
+      const total = values.p + values.f + values.fib + values.ash + values.m;
+      if (total > 100) {
+        return `蛋白質、脂肪、纖維、灰分及水分總和不可超過 100%（目前 ${total.toFixed(1)}%）。`;
+      }
+
+      const optionalFields = [
+        { id: 'weight', label: '容量' },
+        { id: 'price', label: '售價' },
+        { id: 'officialKcal', label: '官方熱量' }
+      ];
+      for (const field of optionalFields) {
+        const raw = document.getElementById(field.id).value.trim();
+        if (raw !== '' && (!Number.isFinite(Number(raw)) || Number(raw) < 0)) {
+          return `${field.label}不可輸入負數，且必須是有效數字。`;
+        }
+      }
+
+      return null;
+    }
+
     window.calc = function() {
+      const validationError = validateNutritionInputs();
+      if (validationError) {
+        showToast('⚠️ ' + validationError);
+        return null;
+      }
+
       const p = parseFloat(document.getElementById('p').value) || 0;
       const f = parseFloat(document.getElementById('f').value) || 0;
       const fib = parseFloat(document.getElementById('fib').value) || 0;
@@ -1268,6 +1332,26 @@
       document.getElementById('resF').innerText = fDMB;
       document.getElementById('resC').innerText = carbDMB;
       document.getElementById('resKcal').innerText = kcal100g;
+
+      const carbTag = document.getElementById('carbTag');
+      const advice = document.getElementById('advice');
+      const carbValue = parseFloat(carbDMB);
+      if (carbValue <= 10) {
+        carbTag.innerText = '低碳水 ✓';
+        carbTag.style.background = '#ecfdf5';
+        carbTag.style.color = '#047857';
+        advice.innerText = '提示：低碳水糧食，碳水 DMB ≤ 10%。';
+      } else if (carbValue <= 20) {
+        carbTag.innerText = '中碳水';
+        carbTag.style.background = '#fffbeb';
+        carbTag.style.color = '#b45309';
+        advice.innerText = '提示：中碳水糧食，碳水 DMB > 10% 至 ≤ 20%。';
+      } else {
+        carbTag.innerText = '高碳水';
+        carbTag.style.background = '#fef2f2';
+        carbTag.style.color = '#b91c1c';
+        advice.innerText = '提示：高碳水糧食，碳水 DMB > 20%。可按需要比較其他低碳水選擇。';
+      }
 
       const resOfficial = document.getElementById('resOfficialKcal');
       const diffBox = document.getElementById('kcalDiffBox');
@@ -1301,19 +1385,35 @@
     window.calcIntake = function() {
       const weight = parseFloat(document.getElementById('catWeight').value) || 4.5;
       const factor = parseFloat(document.getElementById('catStatus').value) || 1.2;
-      const der = Math.round((70 * Math.pow(weight, 0.75)) * factor);
+      const energy = calculateEnergyRequirements(weight, factor);
+      const der = energy.der;
       document.getElementById('dailyKcalReq').innerText = der;
+
+      const mixedReference = document.getElementById('mixedFeedingReference');
+      const mixedDescription = document.getElementById('mixedFeedingDescription');
+      const isWetLikeFood = currentType !== 'dry';
+      if (mixedReference) mixedReference.style.display = isWetLikeFood ? 'block' : 'none';
+      if (mixedDescription && isWetLikeFood) {
+        mixedDescription.innerText = currentType === 'wet'
+          ? '若每天固定餵 1 罐目前濕糧，再用所選乾糧補足'
+          : '若每天固定餵 1 份目前糧食，再用所選乾糧補足';
+      }
 
       if(globalCalculatedKcal100g > 0) {
         const reqGrams = (der / globalCalculatedKcal100g) * 100;
         document.getElementById('feedGrams').innerText = Math.round(reqGrams);
         if(currentType === 'dry') {
           document.getElementById('feedCansRow').style.display = 'none';
-          document.getElementById('mixedDryGrams').innerText = Math.round(Math.max(0, der - 80) / globalCalculatedKcal100g * 100);
+          document.getElementById('mixedDryGrams').innerText = '—';
         } else {
           document.getElementById('feedCansRow').style.display = 'block';
           document.getElementById('feedCans').innerText = (reqGrams / globalFoodWeight).toFixed(1);
-          document.getElementById('mixedDryGrams').innerText = Math.round(Math.max(0, der - (globalCalculatedKcal100g * globalFoodWeight/100)) / 3.85);
+          const quickDryId = document.getElementById('quickDryFood')?.value || 'default';
+          const quickDryFood = getAllAvailableFoods().find(food => food.id === quickDryId);
+          const quickDryKcal100g = quickDryFood?.kcal100g || 385;
+          const wetKcalPerCan = globalCalculatedKcal100g * globalFoodWeight / 100;
+          const remainingKcal = Math.max(0, der - wetKcalPerCan);
+          document.getElementById('mixedDryGrams').innerText = Math.round((remainingKcal / quickDryKcal100g) * 100);
         }
       }
     };
@@ -1347,6 +1447,24 @@
       return [...publicFoods, ...privates];
     }
 
+    function calculateEnergyRequirements(weight, factor) {
+      const safeWeight = Number(weight) > 0 ? Number(weight) : 4.5;
+      const safeFactor = Number(factor) > 0 ? Number(factor) : 1.2;
+      const rer = 70 * Math.pow(safeWeight, 0.75);
+      return {
+        rer: Math.round(rer),
+        der: Math.round(rer * safeFactor)
+      };
+    }
+
+    function populateQuickDryFoodOptions() {
+      const select = document.getElementById('quickDryFood');
+      if (!select) return;
+      const drys = getAllAvailableFoods().filter(food => food.category === 'dry');
+      select.innerHTML = `<option value="default">標準乾糧 (385 kcal/100g)</option>` +
+        drys.map(food => `<option value="${food.id}">${food.brand} - ${food.name} (${food.kcal100g || 385} kcal/100g)</option>`).join('');
+    }
+
     function populateFoodDropdowns() {
       const foods = getAllAvailableFoods();
       const drys = foods.filter(f => f.category === 'dry');
@@ -1359,6 +1477,7 @@
       document.getElementById('selectWetFood').innerHTML = wetOptions;
       document.getElementById('selectMixedWetFood').innerHTML = wetOptions;
       document.getElementById('selectMixedDryFood').innerHTML = dryOptions;
+      populateQuickDryFoodOptions();
     }
 
     window.setPlanMode = function(mode) {
@@ -1375,8 +1494,9 @@
     window.recalcPlanCalories = function() {
       const w = parseFloat(document.getElementById('planCatWeight').value) || 4.5;
       const factor = parseFloat(document.getElementById('planCatFactor').value) || 1.2;
-      const rer = Math.round(70 * Math.pow(w, 0.75));
-      const der = Math.round(rer * factor);
+      const energy = calculateEnergyRequirements(w, factor);
+      const rer = energy.rer;
+      const der = energy.der;
 
       document.getElementById('planRER').innerText = rer;
       document.getElementById('planDER').innerText = der;
@@ -1910,21 +2030,6 @@
       showToast('✅ 已登出；本機資料仍然保留');
     };
 
-    window.handleEmailAuth = function(e) {
-      e.preventDefault();
-      const email = document.getElementById('authEmail').value.trim();
-      if(!email) return;
-
-      currentUser = { email: email, name: email.split('@')[0] };
-      document.getElementById('authStatusText').innerText = currentUser.name + ' (已同步)';
-      document.getElementById('syncBanner').style.background = '#ecfdf5';
-      document.getElementById('syncBanner').style.color = '#047857';
-      document.getElementById('syncBanner').innerText = `✓ 雲端同步模式 (帳號: ${email})`;
-      
-      closeAuthModal();
-      showToast('🎉 登入成功！已啟動 Supabase 雲端同步');
-    };
-
 window.loginWithGoogle = async function() {
   if (!supabaseClient) {
     showToast('⚠️ Supabase 尚未設定');
@@ -2066,6 +2171,44 @@ function updateAuthState(session) {
         document.getElementById('p').value = '40.0'; document.getElementById('f').value = '18.0'; document.getElementById('fib').value = '3.0'; document.getElementById('ash').value = '9.0'; document.getElementById('m').value = '10.0'; document.getElementById('officialKcal').value = '385';
       }
       calc();
+    };
+
+    window.clearCalculator = function() {
+      [
+        'brand', 'name', 'weight', 'price', 'origin', 'imageUrl',
+        'p', 'f', 'fib', 'ash', 'm', 'officialKcal'
+      ].forEach(id => {
+        const field = document.getElementById(id);
+        if (field) field.value = '';
+      });
+
+      const fileInput = document.getElementById('imageFileInput');
+      if (fileInput) fileInput.value = '';
+      if (typeof clearImage === 'function') clearImage();
+
+      currentType = 'wet';
+      ['wet', 'snack', 'dry', 'raw'].forEach(type => {
+        const button = document.getElementById('t-' + type);
+        if (button) button.classList.toggle('active', type === 'wet');
+      });
+
+      globalCalculatedKcal100g = 0;
+      globalFoodWeight = 0;
+      calc();
+      document.getElementById('resP').innerText = '—';
+      document.getElementById('resF').innerText = '—';
+      document.getElementById('resC').innerText = '—';
+      document.getElementById('resKcal').innerText = '—';
+      document.getElementById('resOfficialKcal').innerText = '未提供';
+      document.getElementById('resUnitPrice').innerText = '未輸入';
+      document.getElementById('carbTag').innerText = '待輸入';
+      document.getElementById('carbTag').style.background = '#f5f5f4';
+      document.getElementById('carbTag').style.color = '#78716c';
+      document.getElementById('advice').innerText = '提示：請輸入包裝營養資料後，再判斷碳水 DMB。';
+      ['barP', 'barF', 'barC', 'barO'].forEach(id => {
+        document.getElementById(id).style.width = '0%';
+      });
+      showToast('🧹 已清除營養計算資料');
     };
 
     // 頁面初始化
