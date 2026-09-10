@@ -563,6 +563,7 @@
             <div style="border-top: 1px solid #f5f5f4; margin-top: 14px; padding-top: 10px; font-size: 12px; color: #44403c;">
               <div style="margin-bottom: 4px;">🔥 公式推算熱量：<strong id="resKcal">93</strong> kcal/100g</div>
               <div style="margin-bottom: 4px;">🏷️ 官方標示熱量：<strong id="resOfficialKcal">未提供</strong></div>
+              <div style="margin-bottom: 4px;">🍽️ 餵食計算採用：<strong id="resFeedingKcal">未計算</strong></div>
               <div id="kcalDiffBox" style="margin-bottom: 6px; display: none;" class="badge"></div>
               <div style="margin-bottom: 4px;">💰 每 100g 均價：<strong id="resUnitPrice">未輸入</strong></div>
               <div id="advice" style="margin-top: 10px; padding: 8px; background: #fafaf9; border-radius: 8px; font-size: 11px; color: #57534e;">
@@ -1156,6 +1157,7 @@
         origin: row.origin || '未提供',
         weight: row.weight ?? '',
         kcal100g: row.kcal100g ?? 0,
+        officialKcal: row.official_kcal100g ?? null,
         pDMB: row.p_dmb ?? '0',
         fDMB: row.f_dmb ?? '0',
         carbDMB: row.carb_dmb ?? '0',
@@ -1324,14 +1326,16 @@
       const carbDMB = ((carbWet / dryMatter) * 100).toFixed(1);
       const otherDMB = (((fib + ash) / dryMatter) * 100).toFixed(1);
 
-      const kcal100g = Math.round((p * 3.5) + (f * 8.5) + (carbWet * 3.5));
-      globalCalculatedKcal100g = kcal100g;
+      const calculatedKcal100g = Math.round((p * 3.5) + (f * 8.5) + (carbWet * 3.5));
+      const feedingKcal100g = officialKcal > 0 ? officialKcal : calculatedKcal100g;
+      globalCalculatedKcal100g = feedingKcal100g;
       globalFoodWeight = weight > 0 ? weight : (isDryLikeCategory(currentType) ? 1000 : 85);
 
       document.getElementById('resP').innerText = pDMB;
       document.getElementById('resF').innerText = fDMB;
       document.getElementById('resC').innerText = carbDMB;
-      document.getElementById('resKcal').innerText = kcal100g;
+      document.getElementById('resKcal').innerText = calculatedKcal100g;
+      document.getElementById('resFeedingKcal').innerText = `${feedingKcal100g} kcal/100g${officialKcal > 0 ? '（官方）' : '（公式估算）'}`;
 
       const carbTag = document.getElementById('carbTag');
       const advice = document.getElementById('advice');
@@ -1357,12 +1361,14 @@
       const diffBox = document.getElementById('kcalDiffBox');
       if (officialKcal > 0) {
         resOfficial.innerText = officialKcal + ' kcal/100g';
-        const diffPct = Math.round((Math.abs(kcal100g - officialKcal) / officialKcal) * 100);
+        const diffPct = Math.round((Math.abs(calculatedKcal100g - officialKcal) / officialKcal) * 100);
         diffBox.style.display = 'inline-block';
-        if (diffPct <= 10) {
+        if (diffPct > 15) {
+          diffBox.style.background = '#fef2f2'; diffBox.style.color = '#b91c1c'; diffBox.innerText = `⚠️ 差距 ${diffPct}%（餵食量將以官方熱量計算）`;
+        } else if (diffPct <= 10) {
           diffBox.style.background = '#ecfdf5'; diffBox.style.color = '#047857'; diffBox.innerText = '✓ 公式推算與官方標示相近';
         } else {
-          diffBox.style.background = '#fffbeb'; diffBox.style.color = '#b45309'; diffBox.innerText = `⚠️ 差距 ${diffPct}% (${kcal100g > officialKcal ? '公式較高' : '公式較低'})`;
+          diffBox.style.background = '#fffbeb'; diffBox.style.color = '#b45309'; diffBox.innerText = `⚠️ 差距 ${diffPct}%`;
         }
       } else {
         resOfficial.innerText = '未提供';
@@ -1378,7 +1384,7 @@
       else document.getElementById('resUnitPrice').innerText = '未輸入';
 
       calcIntake();
-      return { pDMB, fDMB, carbDMB, kcal100g };
+      return { pDMB, fDMB, carbDMB, kcal100g: feedingKcal100g, calculatedKcal100g, officialKcal, feedingKcal100g };
     };
 
     // 快速預覽食量小工具
@@ -1410,7 +1416,7 @@
           document.getElementById('feedCans').innerText = (reqGrams / globalFoodWeight).toFixed(1);
           const quickDryId = document.getElementById('quickDryFood')?.value || 'default';
           const quickDryFood = getAllAvailableFoods().find(food => food.id === quickDryId);
-          const quickDryKcal100g = quickDryFood?.kcal100g || 385;
+          const quickDryKcal100g = getFoodFeedingKcal(quickDryFood, 385);
           const wetKcalPerCan = globalCalculatedKcal100g * globalFoodWeight / 100;
           const remainingKcal = Math.max(0, der - wetKcalPerCan);
           document.getElementById('mixedDryGrams').innerText = Math.round((remainingKcal / quickDryKcal100g) * 100);
@@ -1451,6 +1457,13 @@
       return category === 'dry' || category === 'raw';
     }
 
+    function getFoodFeedingKcal(food, fallback) {
+      const official = Number(food?.officialKcal);
+      if (Number.isFinite(official) && official > 0) return official;
+      const calculated = Number(food?.kcal100g);
+      return Number.isFinite(calculated) && calculated > 0 ? calculated : fallback;
+    }
+
     function calculateEnergyRequirements(weight, factor) {
       const safeWeight = Number(weight) > 0 ? Number(weight) : 4.5;
       const safeFactor = Number(factor) > 0 ? Number(factor) : 1.2;
@@ -1466,7 +1479,7 @@
       if (!select) return;
       const drys = getAllAvailableFoods().filter(food => isDryLikeCategory(food.category));
       select.innerHTML = `<option value="default">標準乾糧 (385 kcal/100g)</option>` +
-        drys.map(food => `<option value="${food.id}">${food.brand} - ${food.name} (${food.kcal100g || 385} kcal/100g)</option>`).join('');
+        drys.map(food => `<option value="${food.id}">${food.brand} - ${food.name} (${getFoodFeedingKcal(food, 385)} kcal/100g)</option>`).join('');
     }
 
     function populateFoodDropdowns() {
@@ -1474,8 +1487,8 @@
       const drys = foods.filter(f => isDryLikeCategory(f.category));
       const wets = foods.filter(f => f.category === 'wet' || f.category === 'snack');
 
-      const dryOptions = drys.map(f => `<option value="${f.id}">${f.brand} - ${f.name} (${f.kcal100g || 385} kcal/100g)</option>`).join('') || `<option value="default">標準通用乾糧 (385 kcal/100g)</option>`;
-      const wetOptions = wets.map(f => `<option value="${f.id}">${f.brand} - ${f.name} (${f.weight || 85}g | ${f.kcal100g || 95} kcal/100g)</option>`).join('') || `<option value="default">標準通用主食罐 (85g | 93 kcal/100g)</option>`;
+      const dryOptions = drys.map(f => `<option value="${f.id}">${f.brand} - ${f.name} (${getFoodFeedingKcal(f, 385)} kcal/100g)</option>`).join('') || `<option value="default">標準通用乾糧 (385 kcal/100g)</option>`;
+      const wetOptions = wets.map(f => `<option value="${f.id}">${f.brand} - ${f.name} (${f.weight || 85}g | ${getFoodFeedingKcal(f, 95)} kcal/100g)</option>`).join('') || `<option value="default">標準通用主食罐 (85g | 93 kcal/100g)</option>`;
 
       document.getElementById('selectDryFood').innerHTML = dryOptions;
       document.getElementById('selectWetFood').innerHTML = wetOptions;
@@ -1515,7 +1528,7 @@
       if (currentPlanMode === 'dry') {
         const dryId = document.getElementById('selectDryFood').value;
         const dryFood = foods.find(f => f.id === dryId) || { kcal100g: 385, brand: '標準', name: '通用乾糧' };
-        const kcal100g = dryFood.kcal100g || 385;
+        const kcal100g = getFoodFeedingKcal(dryFood, 385);
         document.getElementById('dryKcalPer100g').innerText = kcal100g;
         document.getElementById('dryKcalPerG').innerText = (kcal100g / 100).toFixed(2);
 
@@ -1525,7 +1538,7 @@
       } else if (currentPlanMode === 'wet') {
         const wetId = document.getElementById('selectWetFood').value;
         const wetFood = foods.find(f => f.id === wetId) || { kcal100g: 93, weight: 85, brand: '標準', name: '通用主食罐' };
-        const kcal100g = wetFood.kcal100g || 93;
+        const kcal100g = getFoodFeedingKcal(wetFood, 93);
         const canW = parseFloat(wetFood.weight) || 85;
         const kcalPerCan = Math.round(kcal100g * (canW / 100));
 
@@ -1545,10 +1558,10 @@
         const wetFood = foods.find(f => f.id === wetId) || { kcal100g: 93, weight: 85, brand: '標準', name: '通用主食罐' };
         const dryFood = foods.find(f => f.id === dryId) || { kcal100g: 385, brand: '標準', name: '通用乾糧' };
 
-        const wetKcalPerCan = Math.round((wetFood.kcal100g || 93) * ((parseFloat(wetFood.weight) || 85) / 100));
+        const wetKcalPerCan = Math.round(getFoodFeedingKcal(wetFood, 93) * ((parseFloat(wetFood.weight) || 85) / 100));
         const wetProvidedKcal = canCount * wetKcalPerCan;
         const remainingKcal = Math.max(0, der - wetProvidedKcal);
-        const dryGrams = Math.round((remainingKcal / (dryFood.kcal100g || 385)) * 100);
+        const dryGrams = Math.round((remainingKcal / getFoodFeedingKcal(dryFood, 385)) * 100);
 
         document.getElementById('planOutputSummary').innerHTML = `每日建議份量：<br>🥫 濕糧 <span style="color:#f97316;">${canCount} 罐</span> + 🌾 乾糧 <span style="color:#f97316;">${dryGrams} 克</span><br><span style="font-size: 12px; color: #78716c;">(濕糧：${wetFood.brand} - ${wetFood.name} | 乾糧：${dryFood.brand} - ${dryFood.name})</span>`;
       }
@@ -1604,7 +1617,8 @@
         origin: document.getElementById('origin').value.trim() || '未提供',
         weight: document.getElementById('weight').value || '85',
         img: document.getElementById('imageUrl').value.trim(),
-        pDMB: res.pDMB, fDMB: res.fDMB, carbDMB: res.carbDMB, kcal100g: res.kcal100g,
+        pDMB: res.pDMB, fDMB: res.fDMB, carbDMB: res.carbDMB, kcal100g: res.calculatedKcal100g,
+        officialKcal: res.officialKcal || null,
         isPreset: false
       };
 
@@ -1626,6 +1640,7 @@
             origin: newFood.origin,
             weight: parseFloat(newFood.weight) || null,
             kcal100g: parseFloat(newFood.kcal100g) || null,
+            official_kcal100g: newFood.officialKcal || null,
             p_dmb: parseFloat(newFood.pDMB) || null,
             f_dmb: parseFloat(newFood.fDMB) || null,
             carb_dmb: parseFloat(newFood.carbDMB) || null,
@@ -1773,7 +1788,8 @@
             <div style="font-size: 11px; color: #78716c; margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap;">
               <span>🌍 ${item.origin || '未提供'}</span>
               <span>⚖️ ${item.weight || '-'}g</span>
-              <span>🔥 ${item.kcal100g || '-'} kcal/100g</span>
+              <span>🔥 公式 ${item.kcal100g || '-'} kcal/100g</span>
+              ${item.officialKcal ? `<span style="color: #0369a1;">🏷️ 官方 ${item.officialKcal} kcal/100g</span>` : ''}
             </div>
           </div>
           <div>
@@ -2204,6 +2220,7 @@ function updateAuthState(session) {
       document.getElementById('resC').innerText = '—';
       document.getElementById('resKcal').innerText = '—';
       document.getElementById('resOfficialKcal').innerText = '未提供';
+      document.getElementById('resFeedingKcal').innerText = '未計算';
       document.getElementById('resUnitPrice').innerText = '未輸入';
       document.getElementById('carbTag').innerText = '待輸入';
       document.getElementById('carbTag').style.background = '#f5f5f4';
